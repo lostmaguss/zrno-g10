@@ -203,6 +203,10 @@ Download `zrno-VERSION-g12-100g.zip` from
 3. Lock the card, put it in the camera and switch the camera on. Press S to
    open the Zrno menu.
 
+Releases also have zips for firmware 1.00C, 1.00E and 1.00F, with
+"untested" in their names. They are built from CHDK's own port for each
+firmware, but they have not been tested on a camera.
+
 The installer has only been tested on a Mac so far. On other systems, set
 the card up by hand as described in `INSTALL.TXT`.
 

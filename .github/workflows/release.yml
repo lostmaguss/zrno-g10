@@ -62,8 +62,7 @@ jobs:
       # Builds for the G12's other firmware versions, each from CHDK's own
       # port for it (tools/firmware_variants.py). They have never run on a
       # camera: their files say "untested" and name the firmware. Each build
-      # is its own artifact (a zip to download); the untested ones never go
-      # in the draft release.
+      # is its own artifact, and the draft release gets them all.
       - name: Build the untested firmware variants
         run: |
           fws=$(python -c "import sys; sys.path.insert(0, 'tools'); import firmware_variants as v; print(' '.join(f for f in v.firmwares('build/chdk-r6355') if not v.tested(f)))")
@@ -109,6 +108,12 @@ jobs:
           name: zrno-g12-100g
           path: build/release/
       - run: bash tests/test_installer.sh
+      - uses: actions/download-artifact@v8
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          pattern: zrno-g12-*-untested
+          merge-multiple: true
+          path: build/untested/
 
       - name: Draft release
         if: startsWith(github.ref, 'refs/tags/')
@@ -116,13 +121,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v=${GITHUB_REF_NAME#v}
-          cat > "$RUNNER_TEMP/notes.md" <<NOTES
-          For the Canon PowerShot G12 on firmware 1.00G.
-
-          **Install on a Mac:** download \`zrno-$v-g12-100g.zip\`, unzip it, put the SD card in the Mac and double-click \`install.command\`. Then lock the card and put it in the camera. \`INSTALL.TXT\` in the zip has the details, and the steps by hand for Windows and Linux.
-
-          \`zrno-$v-g12-100g-chdk-source.zip\` is the source of the firmware: CHDK release-1_6 r6355 with Zrno integrated. \`SHA256SUMS-g12-100g\` has the hashes of both zips.
-          NOTES
-          # The tested 1.00G files only; the untested builds stay in their artifacts.
+          sed "s/{version}/$v/g" docs/RELEASE-NOTES.md > "$RUNNER_TEMP/notes.md"
           gh release create "$GITHUB_REF_NAME" --draft --title "Zrno $v" --notes-file "$RUNNER_TEMP/notes.md" \
-            "build/release/zrno-$v-g12-100g.zip" "build/release/zrno-$v-g12-100g-chdk-source.zip" build/release/SHA256SUMS-g12-100g
+            build/release/zrno-$v-g12-100g.zip build/release/zrno-$v-g12-100g-chdk-source.zip build/release/SHA256SUMS-g12-100g \
+            build/untested/*

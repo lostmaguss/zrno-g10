@@ -95,7 +95,9 @@ This writes, to `build/release/`:
 On GitHub, [release.yml](../.github/workflows/release.yml) does all of this
 for a version tag: set `version` in `card-manifest.json`, commit, then push
 the tag (`git tag v0.8.3 && git push origin v0.8.3`). It builds, runs the
-tests, and attaches the files to a draft release to check and publish.
+tests, and attaches the files to a draft release to check and publish: the
+1.00G files and the untested 1.00C, 1.00E and 1.00F ones. The release text
+comes from [RELEASE-NOTES.md](RELEASE-NOTES.md), with `{version}` filled in.
 
 ## Tests
 
