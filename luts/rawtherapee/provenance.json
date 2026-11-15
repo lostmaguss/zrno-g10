@@ -1,0 +1,104 @@
+{
+  "collection": "RawTherapee Film Simulation Collection 2015-09-20",
+  "mirror_commit": "3b3180f82d4dcea1e6e8c5648473539a910d7f49",
+  "license": "CC-BY-SA-4.0",
+  "official_collection": "https://rawtherapee.com/shared/HaldCLUT.zip",
+  "files": {
+    "PORTRA.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Kodak/Kodak Portra 400 2.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Kodak/Kodak%20Portra%20400%202.png",
+      "sha256": "5a89f5dd12753c4daddccbb9b19087a1c89472218fd7c3086e6eb37b2aac3bb1",
+      "bytes": 2025122
+    },
+    "VELVIA.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Fuji/Fuji Velvia 50.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Fuji/Fuji%20Velvia%2050.png",
+      "sha256": "e8e61b7550ca647aa11ca59544131522d3d249bc36bc282cacfe2a21aa2ae7ad",
+      "bytes": 926055
+    },
+    "KCHROME.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Kodak/Kodak Kodachrome 64.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Kodak/Kodak%20Kodachrome%2064.png",
+      "sha256": "1d96346f4fc1a19f2b0ef018c4b39713319f0b6c7832842993477688a61b7cc8",
+      "bytes": 907598
+    },
+    "HP5.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Black and White/Ilford/Ilford HP5 Plus 400.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Black%20and%20White/Ilford/Ilford%20HP5%20Plus%20400.png",
+      "sha256": "3f803b34a7db73583cf8fbbfc46f1711869d80e415ceaefa5b42e6ea29b0b4f6",
+      "bytes": 231898
+    },
+    "README.txt": {
+      "upstream_path": "HaldCLUT/Film Simulation/README.txt",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/README.txt",
+      "sha256": "363cffb318e25dc4f880e070915aceddfe842e1fdb0a68216bef04719185c69c",
+      "bytes": 2357
+    },
+    "EKTAR.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Kodak/Kodak Ektar 100.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Kodak/Kodak%20Ektar%20100.png",
+      "sha256": "c84bc8368856bc73ccb007c9b1642c755ee5dad74a18ae27cf2f8fd4b36e431b",
+      "bytes": 3895589
+    },
+    "P800.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Kodak/Kodak Portra 800 2.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Kodak/Kodak%20Portra%20800%202.png",
+      "sha256": "96cce024d81d19ab58c9e4a4a02aec554c54414ae91ad3f6178629e542ac93eb",
+      "bytes": 1947302
+    },
+    "F400H.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Fuji/Fuji 400H 2.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Fuji/Fuji%20400H%202.png",
+      "sha256": "6368343e1b72350d225418d391973949825c0ce15367446a4c6e371dc5b86141",
+      "bytes": 1935900
+    },
+    "PROVIA.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Fuji/Fuji Provia 100F.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Fuji/Fuji%20Provia%20100F.png",
+      "sha256": "bcc61690ab5d41236e5d777d37ec75156659165d0889ca2448f5c04b0435deb4",
+      "bytes": 894969
+    },
+    "ASTIA.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Fuji/Fuji Astia 100F.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Fuji/Fuji%20Astia%20100F.png",
+      "sha256": "8438929d2db9cdb173c5804b5a78a7da76b76a3b386f179de0e37659e6aecdd4",
+      "bytes": 1085300
+    },
+    "SUPERIA.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Fuji/Fuji Superia 200.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Fuji/Fuji%20Superia%20200.png",
+      "sha256": "a01899672bb1bee89824a2f8141c698ca7252230f853b268377bf01dd46c5f10",
+      "bytes": 1144678
+    },
+    "POLA669.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/Polaroid/Polaroid 669 3.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/Polaroid/Polaroid%20669%203.png",
+      "sha256": "a918365f2a14370811f4ac503a9f92eb7afa49bd5ea2c90379c472a3ed948961",
+      "bytes": 2007028
+    },
+    "TRIX.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Black and White/Kodak/Kodak TRI-X 400 2.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Black%20and%20White/Kodak/Kodak%20TRI-X%20400%202.png",
+      "sha256": "fbbb7498a9aafd7df8c8d0e347a5850e76fb30b3ab4a25fc4d340c0591e4d325",
+      "bytes": 954943
+    },
+    "ACROS.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Black and White/Fuji/Fuji Neopan Acros 100.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Black%20and%20White/Fuji/Fuji%20Neopan%20Acros%20100.png",
+      "sha256": "753e0feea3cd4d7c03d96a083d0f05f42b95760a6b368e143f01d9e3e7e3edfb",
+      "bytes": 215366
+    },
+    "BLEACH.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/CreativePack-1/BleachBypass1.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/CreativePack-1/BleachBypass1.png",
+      "sha256": "88292621d45694e16a1722918912960dcc8d3831d097a91a2f4684ddffa6aff3",
+      "bytes": 809783
+    },
+    "TEALORG.PNG": {
+      "upstream_path": "HaldCLUT/Film Simulation/Color/CreativePack-1/TealOrange.png",
+      "url": "https://raw.githubusercontent.com/cedeber/hald-clut/3b3180f82d4dcea1e6e8c5648473539a910d7f49/HaldCLUT/Film%20Simulation/Color/CreativePack-1/TealOrange.png",
+      "sha256": "99fa5cb1044741bb4733614a178f391dbc116646bbf386a0cfd091a057601a06",
+      "bytes": 1763617
+    }
+  }
+}

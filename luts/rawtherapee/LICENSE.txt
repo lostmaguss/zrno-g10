@@ -1,0 +1,5 @@
+RawTherapee Film Simulation Collection data and the fifteen converted LUTs
+Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+License: https://creativecommons.org/licenses/by-sa/4.0/
+Legal code: https://creativecommons.org/licenses/by-sa/4.0/legalcode.en
+See README.txt for the original collection notice, provenance.json for source URLs and converted.json for modifications.

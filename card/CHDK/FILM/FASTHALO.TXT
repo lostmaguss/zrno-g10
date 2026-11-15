@@ -1,0 +1,1 @@
+Zrno: a faster Halation. It is within a few levels of the exact Halation. For the exact Halation, delete this file and restart the camera.

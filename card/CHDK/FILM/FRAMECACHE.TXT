@@ -1,0 +1,1 @@
+Zrno: the film effects read the photo through the processor's cache, which makes them faster. The result is the same without it. To turn it off, delete this file and restart the camera.

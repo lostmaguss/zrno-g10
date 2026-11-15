@@ -1,0 +1,24 @@
+name: Host tests
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+      # The menu simulator test builds CHDK's own menu code; the tree is
+      # cached so CHDK's server is asked only when the pinned hashes change.
+      - uses: actions/cache@v6
+        with:
+          path: build/chdk-r6355
+          key: chdk-r6355-${{ hashFiles('tools/chdk-r6355.sha256') }}
+      - run: test -d build/chdk-r6355 || python tools/fetch_chdk.py
+      - run: python tools/test_native.py
+      - run: bash -n installer/install.command

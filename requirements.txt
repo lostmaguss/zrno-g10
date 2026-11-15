@@ -1,0 +1,6 @@
+numpy
+Pillow
+# The relocator check (tests/test_reloc.py, tools/check_reloc.py)
+capstone
+# Optional: tools/check_reloc.py --emulate and the cross-compiled kernel
+# benchmarks (tests/bench_*_arm.py) also need unicorn.

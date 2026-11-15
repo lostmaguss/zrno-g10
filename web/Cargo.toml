@@ -1,0 +1,16 @@
+[package]
+name = "zrno-wasm"
+version = "0.1.0"
+edition = "2021"
+description = "Zrno effect kernels (the camera's C code) and a developer for its sensor backups, for a browser tool"
+license = "GPL-2.0-or-later"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"

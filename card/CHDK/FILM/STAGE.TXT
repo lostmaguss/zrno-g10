@@ -1,0 +1,1 @@
+Zrno: turns on the step where Zrno changes the photo, after the camera develops it and before the JPEG is saved. Keep this file. Without it, Zrno leaves every shot as the camera made it.

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zrno USB</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Test bench for the USB connection: connect, read the card, time a
+   download. Same palette as the editor. */
+:root {
+  --bg: #1d1e20;
+  --panel: #26272a;
+  --line: #36383c;
+  --text: #e9e7e3;
+  --muted: #9b9994;
+  --accent: #ff9b3d;
+  --accent-ink: #1d1e20;
+  --bad: #ff6b5e;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--font-body); }
+.wrap { max-width: 920px; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 22px; }
+h1 { font-size: 17px; font-weight: 600; margin: 0; }
+h1 small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+h2 { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+section { display: flex; flex-direction: column; gap: 8px; }
+.bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font: 500 13px var(--font-body); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input[type="text"], textarea { width: 100%; background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: 13px var(--font-mono); }
+.path { flex: 1 1 240px; width: auto; }
+textarea { min-height: 80px; resize: vertical; }
+label.check { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 13px; }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; }
+.status { font: 12.5px var(--font-mono); color: var(--muted); overflow-wrap: anywhere; }
+.status.bad { color: var(--bad); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 12px; font-size: 13px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 6px; max-height: 420px; overflow-y: auto; }
+table { width: 100%; border-collapse: collapse; font: 12.5px var(--font-mono); font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 5px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--panel); }
+td.num, th.num { text-align: right; }
+tbody tr:last-child td { border-bottom: 0; }
+td button { background: none; border: 0; color: var(--accent); font: inherit; cursor: pointer; padding: 0; }
+td button:hover { text-decoration: underline; }
+pre.log { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: 12.5px var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow-y: auto; }
+progress { width: 100%; accent-color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Zrno over USB<small>Test bench: connects to the camera through CHDK's PTP extension, no card reader</small></h1>
+
+  <section aria-labelledby="h-connect">
+    <h2 id="h-connect">Camera</h2>
+    <div class="bar">
+      <button class="btn primary" id="connect">Connect camera</button>
+      <button class="btn" id="disconnect" disabled>Disconnect</button>
+      <button class="btn" id="rec" disabled>Shooting mode</button>
+      <button class="btn" id="play" disabled>Gallery</button>
+    </div>
+    <p class="note" id="hint">Switch the camera on with Zrno running and plug it in. On a Mac, run <code>killall ptpcamerad</code> in Terminal first, or the browser can't take the camera. Chrome and Edge only.</p>
+    <dl class="facts" id="facts"></dl>
+    <p class="status" id="status" role="status"></p>
+  </section>
+
+  <section aria-labelledby="h-card">
+    <h2 id="h-card">Card</h2>
+    <div class="bar">
+      <button class="btn" id="up" disabled>Up</button>
+      <input type="text" class="path" id="path" value="A/FGRAW" aria-label="Folder on the card" spellcheck="false">
+      <button class="btn" id="list" disabled>List</button>
+      <label class="check"><input type="checkbox" id="keep"> Save downloads</label>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Name</th><th class="num">Size</th><th>Modified</th><th></th></tr></thead>
+        <tbody id="files"><tr><td colspan="4" class="note">Not connected.</td></tr></tbody>
+      </table>
+    </div>
+    <progress id="progress" value="0" max="1" hidden></progress>
+  </section>
+
+  <section aria-labelledby="h-log">
+    <h2 id="h-log">Downloads</h2>
+    <p class="note">Each download with its time and speed. A backup in FGRAW is 15.6 MB.</p>
+    <pre class="log" id="log">Nothing downloaded yet.</pre>
+  </section>
+
+  <section aria-labelledby="h-lua">
+    <h2 id="h-lua">Lua</h2>
+    <textarea id="code" spellcheck="false" aria-label="Lua to run on the camera">return get_vbatt(), get_free_disk_space()</textarea>
+    <div class="bar"><button class="btn" id="run" disabled>Run on camera</button></div>
+    <pre class="log" id="lua-out">Returned values show here.</pre>
+  </section>
+</div>
+
+<script type="module">
+import { ChdkCamera } from './ptp.js';
+
+const $ = (id) => document.getElementById(id);
+let cam = null, busy = false, logged = false;
+
+function setStatus(text, bad) { $('status').textContent = text; $('status').classList.toggle('bad', !!bad); }
+function controls() {
+  const on = !!cam;
+  $('connect').disabled = on || busy;
+  for (const id of ['disconnect', 'rec', 'play', 'list', 'up', 'run']) $(id).disabled = !on || busy;
+}
+async function task(label, fn) {
+  if (busy) return;
+  busy = true; controls(); setStatus(label + '…');
+  try { const msg = await fn(); setStatus(msg || 'Ready.'); }
+  catch (err) {
+    console.error(err);
+    setStatus(err.message || String(err), true);
+    if (err.name === 'NotFoundError' && !cam) setStatus('No camera picked.', true);
+  } finally { busy = false; controls(); }
+}
+
+function facts(rows) {
+  const dl = $('facts'); dl.replaceChildren();
+  for (const [k, v] of rows) {
+    const dt = document.createElement('dt'); dt.textContent = k;
+    const dd = document.createElement('dd'); dd.textContent = v;
+    dl.append(dt, dd);
+  }
+}
+
+async function readStatus() {
+  const v = await cam.version();
+  const s = await cam.lua(`local b=get_buildinfo() local r=get_mode()
+return b.platform..' '..b.platsub, b.build_number..' r'..tostring(b.build_revision), r and 'shooting' or 'gallery', get_vbatt(), get_free_disk_space()`);
+  facts([
+    ['Camera', `${s[0]} (${cam.name})`],
+    ['CHDK', `${s[1]}, PTP protocol ${v.major}.${v.minor}`],
+    ['Mode', s[2]],
+    ['Battery', `${s[3]} mV`],
+    ['Free space', `${(s[4] / 1024).toFixed(0)} MiB`],
+  ]);
+}
+
+function onConnected(c) { cam = c; }
+navigator.usb?.addEventListener('disconnect', (e) => {
+  if (cam && e.device === cam.device) { cam = null; facts([]); setStatus('The camera was unplugged.', true); controls(); }
+});
+
+$('connect').addEventListener('click', () => task('Connecting', async () => {
+  onConnected(await ChdkCamera.request());
+  await readStatus();
+  await listFolder();
+  return `Connected to ${cam.name}.`;
+}));
+
+$('disconnect').addEventListener('click', () => task('Disconnecting', async () => {
+  const c = cam; cam = null; facts([]);
+  await c.close();
+  $('files').innerHTML = '<tr><td colspan="4" class="note">Not connected.</td></tr>';
+  return 'Disconnected.';
+}));
+
+function switchMode(rec) {
+  return task(rec ? 'Switching to shooting mode' : 'Switching to the gallery', async () => {
+    const msg = await cam.lua(`switch_mode_usb(${rec ? 1 : 0})
+local t=get_tick_count()
+repeat if get_mode()==${rec} then return 'after '..(get_tick_count()-t)..' ms' end sleep(100)
+until get_tick_count()-t>5000
+return nil`);
+    await readStatus();
+    return msg ? `${rec ? 'Shooting mode' : 'Gallery'} ${msg}.` : `Still not in ${rec ? 'shooting mode' : 'the gallery'} after 5 s.`;
+  });
+}
+$('rec').addEventListener('click', () => switchMode(true));
+$('play').addEventListener('click', () => switchMode(false));
+
+const fmtSize = (n) => n >= 1 << 20 ? (n / (1 << 20)).toFixed(1) + ' MiB' : n >= 1024 ? (n / 1024).toFixed(1) + ' KiB' : n + ' B';
+const fmtTime = (t) => t ? new Date(t * 1000).toISOString().replace('T', ' ').slice(0, 16) : '';
+const cleanPath = (p) => p.trim().replace(/\/+$/, '') || 'A';
+
+async function listFolder() {
+  const path = cleanPath($('path').value);
+  $('path').value = path;
+  const entries = await cam.list(path);
+  entries.sort((a, b) => (b.dir - a.dir) || a.name.localeCompare(b.name));
+  const body = $('files'); body.replaceChildren();
+  if (!entries.length) body.innerHTML = '<tr><td colspan="4" class="note">Empty folder.</td></tr>';
+  for (const e of entries) {
+    const tr = document.createElement('tr');
+    const name = document.createElement('td');
+    const size = document.createElement('td'); size.className = 'num';
+    const when = document.createElement('td'); when.textContent = fmtTime(e.mtime);
+    const act = document.createElement('td');
+    const btn = document.createElement('button');
+    if (e.dir) {
+      name.textContent = e.name + '/';
+      btn.textContent = 'Open';
+      btn.addEventListener('click', () => { $('path').value = path + '/' + e.name; task('Listing', listFolder); });
+    } else {
+      name.textContent = e.name;
+      size.textContent = fmtSize(e.size);
+      btn.textContent = 'Download';
+      btn.addEventListener('click', () => task('Downloading ' + e.name, () => download(path + '/' + e.name, e.size)));
+    }
+    act.append(btn);
+    tr.append(name, size, when, act);
+    body.append(tr);
+  }
+  return `${entries.length} entries in ${path}.`;
+}
+$('list').addEventListener('click', () => task('Listing', listFolder));
+$('path').addEventListener('keydown', (e) => { if (e.key === 'Enter' && cam && !busy) task('Listing', listFolder); });
+$('up').addEventListener('click', () => {
+  const p = cleanPath($('path').value);
+  $('path').value = p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : 'A';
+  task('Listing', listFolder);
+});
+
+async function download(path, expected) {
+  const bar = $('progress');
+  bar.hidden = false; bar.value = 0;
+  const t0 = performance.now();
+  let data;
+  try {
+    data = await cam.download(path, (got, total) => { bar.value = got / total; });
+  } finally { bar.hidden = true; }
+  const s = (performance.now() - t0) / 1000;
+  const mbs = data.byteLength / 1e6 / s;
+  const line = `${path}  ${fmtSize(data.byteLength)} in ${s.toFixed(2)} s, ${mbs.toFixed(2)} MB/s`
+    + (expected && expected !== data.byteLength ? `  (expected ${expected} bytes, got ${data.byteLength})` : '');
+  $('log').textContent = (logged ? $('log').textContent + '\n' : '') + line;
+  logged = true;
+  if ($('keep').checked) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([data]));
+    a.download = path.split('/').pop();
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+  }
+  return line;
+}
+
+$('run').addEventListener('click', () => task('Running Lua', async () => {
+  const t0 = performance.now();
+  const r = await cam.lua($('code').value, { timeout: 60000 });
+  $('lua-out').textContent = JSON.stringify(r, null, 2) ?? 'nil';
+  return `Script ended after ${Math.round(performance.now() - t0)} ms.`;
+}));
+
+if (!navigator.usb) {
+  setStatus('This browser has no WebUSB. Open the page in Chrome or Edge, from localhost or https.', true);
+  $('connect').disabled = true;
+} else {
+  controls();
+  // A camera allowed before reconnects without the picker.
+  ChdkCamera.known().then((c) => {
+    if (!c || cam) return;
+    onConnected(c);
+    return task('Reading the camera', async () => { await readStatus(); await listFolder(); return `Connected to ${cam.name}.`; });
+  }).catch((err) => setStatus(err.message, true));
+}
+</script>
+</body>
+</html>

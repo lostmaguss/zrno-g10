@@ -1,0 +1,137 @@
+{
+  "PORTRA.LUT": {
+    "label": "Portra 400",
+    "source": "PORTRA.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "6ab6f30296180cf90bfce4df122b5c98ba14b0ee83724284f9febb0575eb02a9",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "VELVIA.LUT": {
+    "label": "Velvia 50",
+    "source": "VELVIA.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "00bd55b1e105cfc9739405b9d10992874074b37a27b2867a39022becb6fb28f9",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "KCHROME.LUT": {
+    "label": "Kodachrome 64",
+    "source": "KCHROME.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "baf973113146ed41954b4dce483760fffff19ee54cd89709a544937f52d71763",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "HP5.LUT": {
+    "label": "Ilford HP5",
+    "source": "HP5.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "6c96dc51d518f7096ed01aefffe424dc9be7117fd5eca336c44c1c276efd4964",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "EKTAR.LUT": {
+    "label": "Ektar 100",
+    "source": "EKTAR.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "74101b8ab595da67aa93273b51b837e60dfa644e6bb69e2b7f6d8ab4317093ed",
+    "license": "CC-BY-SA-4.0",
+    "changes": "256^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "P800.LUT": {
+    "label": "Portra 800",
+    "source": "P800.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "56667dbb22585095115659d1af8a4277db90d76449704c2753110939f2dd04ff",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "F400H.LUT": {
+    "label": "Fuji 400H",
+    "source": "F400H.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "776eebb20c040816dff000c2b714cf68a5595f25c1af32c98cb1e4a10c4933c7",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "PROVIA.LUT": {
+    "label": "Provia 100F",
+    "source": "PROVIA.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "74ceb23d780590daaaa3a499add9a982590f47cb4174274e568c45278d04b61c",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "ASTIA.LUT": {
+    "label": "Astia 100F",
+    "source": "ASTIA.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "7accab6cad76a592d84066e25f00108074d5e7486995880e4d389eb1ceff9b66",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "SUPERIA.LUT": {
+    "label": "Superia 200",
+    "source": "SUPERIA.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "818904d25027b1321ba5fdb4d3d0ff91dd524e9e9cbcfeb67c96b5054a6127e8",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "POLA669.LUT": {
+    "label": "Polaroid 669",
+    "source": "POLA669.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "395a5c8da1c55c79f389dd40b8c6ad6bc82dbb31a75062be95f7f6419436023c",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "TRIX.LUT": {
+    "label": "Tri-X 400",
+    "source": "TRIX.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "91a6f2926707ce7eff96443001f506e661bd2f919b7b28b3fb9a18b35f71e9f1",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "ACROS.LUT": {
+    "label": "Acros 100",
+    "source": "ACROS.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "1e55e8fedc006b04b34a3be84c3578e1e790526eb7fdfe544e4e01815cc196f0",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "BLEACH.LUT": {
+    "label": "Bleach Bypass",
+    "source": "BLEACH.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "d2336b111a7a416112dadde3a80d304b83f199d03ceff71366f6248fe534d600",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  },
+  "TEALORG.LUT": {
+    "label": "Teal & Orange",
+    "source": "TEALORG.PNG",
+    "lattice_size": 17,
+    "bytes": 29494,
+    "sha256": "61ab013ccc4660c21ed5aacbd2028481ff2b9e13ff8cc62e38a8f4868e54a01d",
+    "license": "CC-BY-SA-4.0",
+    "changes": "144^3 Hald resampled tetrahedrally to 17^3, uint16 RGB, G12 checksum; L-mode output replicated to RGB"
+  }
+}

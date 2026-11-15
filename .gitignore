@@ -1,0 +1,17 @@
+# Build output: CHDK tree, firmware, host test binaries, reports
+/build/
+/validation/
+# Firmware built by tools/build_firmware.py (contains Canon-derived code)
+/card/DISKBOOT.BIN
+/card/CHDK/MODULES/
+# Your camera's ROM dump: Canon's firmware, never commit it
+/rom/
+# Installer backups
+/card-install-*/
+# Python and OS
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+.DS_Store
+.claude/

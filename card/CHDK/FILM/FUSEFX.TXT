@@ -1,0 +1,1 @@
+Zrno: Bloom and Grain run as one pass, which makes them faster. It needs ROWCACHE.TXT. To run them separately, delete this file and restart the camera. Experimental.

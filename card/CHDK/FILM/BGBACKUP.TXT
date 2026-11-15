@@ -1,0 +1,1 @@
+Zrno: writes the sensor backup at the same time as the camera develops the photo, which makes saving faster. To write the backup first instead, delete this file and restart the camera.

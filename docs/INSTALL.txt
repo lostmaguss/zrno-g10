@@ -1,0 +1,57 @@
+Zrno {version} for the Canon PowerShot G12, firmware 1.00G only
+================================================================
+
+Unofficial firmware, not made, supported or endorsed by Canon. Use it at your
+own risk: there is no warranty (see COPYING).
+
+
+Install on a Mac
+----------------
+
+1. Put the SD card in the Mac (card slot or USB card reader), unlocked.
+
+2. Double-click install.command. If macOS says it cannot check the file for
+   malware, click Done, open System Settings > Privacy & Security, click
+   Open Anyway next to "install.command", and confirm.
+
+3. The installer finds the card. A new card is erased and set up for the
+   G12: type ERASE when asked (everything on the card is deleted). A card
+   that is already set up can be updated instead, keeping its photos and
+   settings. macOS asks for your login password once, to make the card
+   bootable.
+
+4. Take the card out, slide its switch down to LOCK, put it in the camera
+   and switch on. The S button opens the Zrno menu. Processing is Off until
+   you switch it on there.
+
+The camera starts Zrno only from a locked card, and still takes photos onto
+it. With the card unlocked, the camera starts as Canon made it, and sees
+only the card's small ZRNO_BOOT part: use another card for that, or run the
+installer again to set this one up for Zrno. Nothing is installed in the
+camera itself.
+
+
+Check the firmware first
+------------------------
+
+Zrno runs only on firmware 1.00G. To check: put an empty file named ver.req
+on a card, start the camera in playback, hold FUNC.SET and press DISP. The
+screen shows the version: it must say GM1.00G.
+
+
+Windows and Linux
+-----------------
+
+There is no installer for these yet. Set the card up by hand:
+
+1. Two partitions: the first about 32 MB, FAT16, with the text BOOTDISK at
+   byte 0x40 (64) of its boot sector; the second the rest of the card,
+   FAT32. CHDK's card tools can do this:
+   https://chdk.fandom.com/wiki/Prepare_your_SD_card
+2. Copy DISKBOOT.BIN to both partitions, and the CHDK folder to the second.
+   CARD.SHA256 lists every file with its SHA-256 hash.
+3. Lock the card and put it in the camera.
+
+
+Built from {commit}. Source: https://github.com/suzvuk/zrno and
+zrno-{version}-{tag}-chdk-source.zip (CHDK with Zrno integrated).

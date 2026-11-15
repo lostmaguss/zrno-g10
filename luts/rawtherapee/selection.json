@@ -1,0 +1,88 @@
+[
+  {
+    "id": "PORTRA",
+    "label": "Portra 400",
+    "category": "Colour negative"
+  },
+  {
+    "id": "VELVIA",
+    "label": "Velvia 50",
+    "category": "Slide"
+  },
+  {
+    "id": "KCHROME",
+    "label": "Kodachrome 64",
+    "category": "Slide"
+  },
+  {
+    "id": "HP5",
+    "label": "Ilford HP5",
+    "category": "Monochrome"
+  },
+  {
+    "id": "EKTAR",
+    "label": "Ektar 100",
+    "category": "Colour negative",
+    "note": "Vivid colour; try landscapes and travel."
+  },
+  {
+    "id": "P800",
+    "label": "Portra 800",
+    "category": "Colour negative",
+    "note": "An alternative to the existing Portra 400."
+  },
+  {
+    "id": "F400H",
+    "label": "Fuji 400H",
+    "category": "Colour negative",
+    "note": "Fuji colour-negative option for people and daylight."
+  },
+  {
+    "id": "PROVIA",
+    "label": "Provia 100F",
+    "category": "Slide",
+    "note": "A slide-film alternative to Velvia."
+  },
+  {
+    "id": "ASTIA",
+    "label": "Astia 100F",
+    "category": "Slide",
+    "note": "Another slide palette to compare on portraits."
+  },
+  {
+    "id": "SUPERIA",
+    "label": "Superia 200",
+    "category": "Colour negative",
+    "note": "Everyday colour-negative palette."
+  },
+  {
+    "id": "POLA669",
+    "label": "Polaroid 669",
+    "category": "Instant",
+    "note": "Instant-film-inspired colour shifts."
+  },
+  {
+    "id": "TRIX",
+    "label": "Tri-X 400",
+    "category": "Monochrome",
+    "note": "Alternative black-and-white tonal rendering."
+  },
+  {
+    "id": "ACROS",
+    "label": "Acros 100",
+    "category": "Monochrome",
+    "note": "Compare its tonal curve with HP5 and Tri-X."
+  },
+  {
+    "id": "BLEACH",
+    "label": "Bleach Bypass",
+    "category": "Creative",
+    "note": "Bleach-bypass-inspired desaturation and contrast."
+  },
+  {
+    "id": "TEALORG",
+    "label": "Teal & Orange",
+    "category": "Creative",
+    "note": "Stylised complementary colour grading."
+  }
+]

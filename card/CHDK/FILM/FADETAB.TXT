@@ -1,0 +1,1 @@
+Zrno: Bloom and Soft focus use a 64 KB table built when the camera starts, which makes them faster. The result is the same without it. To turn it off, delete this file and restart the camera.

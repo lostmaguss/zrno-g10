@@ -1,0 +1,1 @@
+Zrno: applies the selected look, effects and engine to each processed shot. Keep this file. Without it, Zrno only makes the sensor backup.

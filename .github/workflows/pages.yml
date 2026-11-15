@@ -1,0 +1,55 @@
+name: Web editor on Pages
+
+# Builds the browser tool (web/build.sh: the camera's C kernels and the
+# backup developer compiled to WebAssembly, the page, the looks, PRINT.BIN)
+# and publishes web/dist to GitHub Pages. Everything runs in the visitor's
+# browser; Pages only serves the files, over HTTPS as WebUSB requires.
+# Pages must be set to "GitHub Actions" in the repository's settings.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "web/**"
+      - "camera/**"
+      - "card/CHDK/FILM/**"
+      - ".github/workflows/pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push waits rather than cancelling a deploy.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Rust with the WebAssembly target
+        run: rustup target add wasm32-unknown-unknown
+      - name: Tests (backup reader, engines)
+        working-directory: web
+        run: cargo test --release
+      - name: Build
+        working-directory: web
+        run: ./build.sh
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v5

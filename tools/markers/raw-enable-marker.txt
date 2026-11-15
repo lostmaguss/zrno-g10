@@ -1,0 +1,1 @@
+Zrno: turns on processing and the sensor backups that Re-develop uses. Keep this file. Without it, Zrno leaves every shot as the camera made it. (The file name is an old one, kept so that existing cards still work.)

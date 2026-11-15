@@ -1,0 +1,1 @@
+Zrno: the colour pass works on the photo a few rows at a time in fast memory. The result is the same without it. To turn it off, delete this file and restart the camera. Experimental.

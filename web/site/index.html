@@ -1,0 +1,1783 @@
+<!DOCTYPE html>
+<!-- SPDX-License-Identifier: GPL-2.0-or-later -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Zrno</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* A darkroom bench: a neutral grey surround so colour is judged fairly,
+   controls in a left rail like the camera's Film simulation menu, the
+   photo filling the rest. One theme on purpose: a light surround would
+   bias every judgement of the image. Accent = the date stamp's LED orange. */
+:root {
+  --bg: #1d1e20;
+  --panel: #26272a;
+  --line: #36383c;
+  --text: #e9e7e3;
+  --muted: #9b9994;
+  --accent: #ff9b3d;
+  --accent-ink: #1d1e20;
+  --warn: #f2c14e;
+  --bad: #ff6b5e;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--text); font: 14px/1.45 var(--font-body); }
+.app { display: grid; grid-template-columns: 330px 1fr; height: 100%; }
+aside { background: var(--panel); border-right: 1px solid var(--line); overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 18px; }
+h1 { font-size: 17px; font-weight: 600; margin: 0; letter-spacing: 0.01em; }
+h1 small { display: block; font-weight: 400; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+h2 { font-size: 11px; font-weight: 600; letter-spacing: 0.09em; text-transform: uppercase; color: var(--muted); margin: 0 0 8px; }
+section { display: flex; flex-direction: column; gap: 8px; }
+.row { display: grid; grid-template-columns: 112px 1fr; align-items: center; gap: 8px; }
+.row > label, .row > span.label { color: var(--text); font-size: 13px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.seg button { background: transparent; color: var(--muted); border: 0; border-left: 1px solid var(--line); padding: 5px 2px; font: 500 12px var(--font-body); cursor: pointer; min-width: 0; }
+.seg button:first-child { border-left: 0; }
+.seg button:hover { color: var(--text); background: #2e3033; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg button:disabled { opacity: 0.4; cursor: default; background: transparent; color: var(--muted); }
+select, input[type="text"], input[type="number"] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; font: 13px var(--font-body); }
+input[type="text"] { font-family: var(--font-mono); }
+.btn { background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 7px 12px; font: 500 13px var(--font-body); cursor: pointer; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: 0.45; cursor: default; border-color: var(--line); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.note { color: var(--muted); font-size: 12.5px; margin: 0; }
+[hidden] { display: none !important; }
+.panel { display: flex; flex-direction: column; gap: 8px; }
+.panel[hidden], .presets:empty { display: none; }
+.panel .sub { font-size: 11px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+.count { color: var(--muted); font: 11.5px var(--font-mono); margin-left: auto; }
+.presets { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; max-height: 280px; overflow-y: auto; }
+.preset { display: flex; align-items: center; gap: 2px; border-radius: 6px; }
+.preset:hover { background: #2e3033; }
+.preset .apply { flex: 1; min-width: 0; text-align: left; background: none; border: 1px solid transparent; border-radius: 6px; color: var(--text); padding: 5px 8px; cursor: pointer; font: 13px var(--font-body); }
+.preset .apply small { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.preset.active .apply { border-color: var(--accent); }
+.preset .act { width: 26px; height: 26px; background: none; border: 0; border-radius: 5px; color: var(--muted); cursor: pointer; font-size: 13px; opacity: 0; }
+.preset:hover .act, .preset:focus-within .act { opacity: 1; }
+.preset .act:hover { color: var(--text); background: var(--line); }
+.preset .act.del:hover { color: var(--bad); }
+.preset input { flex: 1; min-width: 0; }
+.preset-new { display: flex; flex-direction: column; gap: 6px; }
+.fit { font: 11.5px var(--font-mono); color: var(--muted); }
+.fit.over { color: var(--bad); }
+@media (hover: none) { .preset .act { opacity: 1; } }
+.wb-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
+.btn.small { padding: 3px 9px; font-size: 12px; }
+.slider { display: grid; grid-template-columns: 1fr 34px; align-items: center; gap: 8px; }
+.slider input { width: 100%; accent-color: var(--accent); }
+.slider output { font: 12.5px var(--font-mono); text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+#temp { background: linear-gradient(90deg, #6f9fd8, #e0b060); }
+#tint { background: linear-gradient(90deg, #6fbf6f, #d070c0); }
+#temp, #tint { -webkit-appearance: none; appearance: none; height: 4px; border-radius: 2px; }
+#temp::-webkit-slider-thumb, #tint::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: var(--text); border: 2px solid var(--panel); cursor: pointer; }
+.head { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.head h2 { margin: 0; }
+.info { width: 18px; height: 18px; border-radius: 50%; border: 1px solid var(--line); background: transparent; color: var(--muted); font: italic 600 11px/1 Georgia, serif; cursor: pointer; padding: 0; display: grid; place-items: center; }
+.info:hover, .info[aria-expanded="true"] { color: var(--text); border-color: var(--muted); }
+.help { background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; }
+.btn.danger { color: var(--bad); }
+.btn.danger:hover { border-color: var(--bad); }
+.btn.danger.solid { background: var(--bad); color: var(--accent-ink); border-color: var(--bad); }
+dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 18px; max-width: min(420px, calc(100vw - 32px)); box-shadow: 0 12px 40px rgba(0,0,0,0.5); }
+dialog::backdrop { background: rgba(0,0,0,0.55); }
+dialog h3 { margin: 0 0 8px; font-size: 15px; }
+dialog p { margin: 0 0 10px; font-size: 13px; }
+dialog ul { margin: 0 0 12px; padding-left: 18px; font: 12.5px var(--font-mono); }
+dialog .actions { display: flex; justify-content: flex-end; gap: 8px; }
+.note.warn { color: var(--warn); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; font-size: 12.5px; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.osd { font: 13px var(--font-mono); background: rgba(0,0,0,0.55); color: #fff; padding: 6px 8px; border-radius: 4px; white-space: pre; overflow-x: auto; }
+.menu { font: 12.5px var(--font-mono); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; margin: 0; white-space: pre-wrap; color: var(--text); }
+main { display: grid; grid-template-rows: auto 1fr auto; min-width: 0; min-height: 0; }
+/* Film strip of the opened card or folder: one tile per sensor backup,
+   shown with its camera JPEG's thumbnail. */
+.strip { border-top: 1px solid var(--line); background: var(--panel); min-width: 0; }
+.strip[hidden] { display: none; }
+.strip-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; padding: 8px 16px 0; font-size: 12.5px; color: var(--muted); }
+.strip-head .hint { margin-left: auto; font-family: var(--font-mono); }
+.strip-list { display: flex; gap: 6px; overflow-x: auto; margin: 0; padding: 8px 16px 10px; list-style: none; scroll-padding: 0 16px; }
+.shot { flex: 0 0 auto; width: 116px; background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 4px; color: var(--text); cursor: pointer; font: 11.5px var(--font-mono); text-align: left; }
+.shot:hover { border-color: var(--line); }
+.shot[aria-current="true"] { border-color: var(--accent); background: #2e3033; }
+.shot img { display: block; width: 106px; height: 80px; object-fit: cover; background: #151617; border-radius: 3px; }
+.shot .name { display: flex; justify-content: space-between; gap: 4px; margin-top: 4px; white-space: nowrap; }
+.shot .kinds { color: var(--muted); }
+.shot.saved .kinds::after { content: " ✓"; color: var(--accent); }
+.toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.toolbar .seg { min-width: 260px; }
+.toolbar .zoom { min-width: 120px; }
+.status { margin-left: auto; color: var(--muted); font: 12.5px var(--font-mono); font-variant-numeric: tabular-nums; }
+.status.bad { color: var(--bad); }
+.stage { position: relative; overflow: hidden; display: grid; place-items: center; min-height: 0; background: var(--bg); }
+.stage.zoomed { overflow: auto; display: block; cursor: grab; }
+.stage.zoomed.dragging { cursor: grabbing; }
+.stage canvas { display: block; cursor: zoom-in; box-shadow: 0 2px 18px rgba(0,0,0,0.45); }
+.stage.zoomed canvas { cursor: inherit; margin: 16px; }
+.stage.dropping::after { content: "Drop the card or a folder"; position: absolute; inset: 12px; border: 2px dashed var(--accent); border-radius: 10px; display: grid; place-items: center; font-size: 18px; color: var(--accent); background: rgba(29,30,32,0.7); }
+.badge { position: absolute; left: 16px; bottom: 14px; background: rgba(0,0,0,0.6); color: #fff; font-size: 12.5px; padding: 5px 9px; border-radius: 4px; pointer-events: none; }
+.stage.zoomed .badge { display: none; }
+/* Loader: while a backup downloads and develops, a skeleton frame the size
+   of the photo shows its camera thumbnail, blurred, under a shimmer, with
+   the progress at the bottom. */
+.viewer { position: relative; display: grid; min-height: 0; min-width: 0; }
+.loading { position: absolute; inset: 0; display: grid; place-items: center; background: var(--bg); z-index: 2; }
+.loading[hidden] { display: none; }
+.loading-box { position: relative; overflow: hidden; background: #2a2b2e; border-radius: 2px; box-shadow: 0 2px 18px rgba(0,0,0,0.45); }
+.loading-box img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; filter: blur(8px) brightness(0.75); transform: scale(1.05); }
+.loading-box img:not([src]) { display: none; }
+.loading-box::after, .shot img:not([src]) { background-image: linear-gradient(100deg, transparent 30%, rgba(255,255,255,0.09) 50%, transparent 70%); background-size: 250% 100%; animation: shimmer 1.4s linear infinite; }
+.loading-box::after { content: ""; position: absolute; inset: 0; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+.loading-info { position: absolute; left: 16px; right: 16px; bottom: 14px; z-index: 1; display: flex; flex-direction: column; gap: 7px; color: #fff; font: 12.5px var(--font-mono); font-variant-numeric: tabular-nums; text-shadow: 0 1px 3px rgba(0,0,0,0.7); }
+.loading-bar { height: 3px; background: rgba(255,255,255,0.22); border-radius: 2px; overflow: hidden; }
+.loading-bar span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+footer { color: var(--muted); font-size: 11.5px; line-height: 1.5; border-top: 1px solid var(--line); padding-top: 12px; }
+footer a { color: var(--muted); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (max-width: 860px) {
+  .app { grid-template-columns: 1fr; grid-template-rows: auto auto; height: auto; }
+  aside { border-right: 0; border-bottom: 1px solid var(--line); }
+  main { grid-template-rows: auto 70vh auto; }
+  .strip-head .hint { display: none; }
+  .toolbar .seg { min-width: 0; flex: 1 1 220px; }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; } .loading-box::after, .shot img:not([src]) { animation: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+<aside>
+  <h1>Zrno<small>The camera's effect code, running in your browser</small></h1>
+
+  <section aria-labelledby="h-photo">
+    <div class="head"><h2 id="h-photo">Photo</h2><button class="info" id="help-btn" aria-expanded="false" aria-controls="help" title="How to connect">i</button></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="usb">Connect camera</button>
+      <button class="btn" id="open">Open backups</button>
+      <button class="btn" id="chart">Test chart</button>
+    </div>
+    <input type="file" id="file" class="visually-hidden" multiple accept=".raw,.RAW,.txt,.TXT,.jpg,.JPG">
+    <p class="note help" id="help" hidden>Plug the camera in with Zrno running and use Connect camera, in Chrome or Edge. Each shot downloads when you open it, and opens with the look the camera gave it. On a Mac, run <code>killall ptpcamerad</code> in Terminal first. You can also drop the card or a folder from it here.</p>
+    <div class="row"><span class="label">White balance</span><div class="wb-head"><span id="wb-base">As shot</span><button class="btn small" id="wb-reset" type="button">Reset</button></div></div>
+    <div class="row"><label for="temp">Temperature</label><div class="slider"><input type="range" id="temp" min="-100" max="100" step="1" value="0"><output id="temp-v" for="temp">0</output></div></div>
+    <div class="row"><label for="tint">Tint</label><div class="slider"><input type="range" id="tint" min="-100" max="100" step="1" value="0"><output id="tint-v" for="tint">0</output></div></div>
+    <p class="note" id="wb-note">Each backup keeps the camera's white balance in a .SET file beside it. Temperature warms or cools from there, Tint moves between green and magenta.</p>
+    <dl class="facts" id="facts"></dl>
+    <p class="note" id="clock-note" hidden></p>
+    <p class="note">Files stay on this computer: decoding and grading run here, nothing is uploaded.</p>
+  </section>
+
+  <section aria-labelledby="h-save">
+    <h2 id="h-save">Save</h2>
+    <div class="row"><span class="label" id="l-dest">Save to</span><div class="seg" id="dest" role="group" aria-labelledby="l-dest"></div></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn primary" id="save" disabled>Save</button>
+      <button class="btn" id="save-all" disabled>Save all shots</button>
+      <button class="btn danger" id="delete" disabled>Delete shot…</button>
+    </div>
+    <p class="note" id="save-note"></p>
+  </section>
+
+  <dialog id="confirm" aria-labelledby="confirm-title">
+    <h3 id="confirm-title"></h3>
+    <p id="confirm-text"></p>
+    <ul id="confirm-list"></ul>
+    <div class="actions"><button class="btn" id="confirm-no" value="no">Cancel</button><button class="btn danger solid" id="confirm-yes" value="yes">Delete</button></div>
+  </dialog>
+
+  <section aria-labelledby="h-looks">
+    <div class="head"><h2 id="h-looks">Looks</h2><span class="count" id="looks-count"></span><button class="info" id="looks-refresh" title="Read the camera's looks again" aria-label="Read the camera's looks again">↻</button></div>
+    <ul class="presets" id="presets"></ul>
+    <div class="preset-new" id="preset-new" hidden>
+      <input type="text" id="preset-name" maxlength="20" spellcheck="false" autocomplete="off" aria-label="Name of the new look" placeholder="Name">
+      <div class="fit" id="preset-fit"></div>
+      <div style="display:flex;gap:8px"><button class="btn primary small" id="preset-save">Save to camera</button><button class="btn small" id="preset-cancel">Cancel</button></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="preset-add">+ New look</button>
+      <button class="btn" id="camera-look" hidden>Back to this shot's look</button>
+    </div>
+    <p class="note" id="looks-note"></p>
+  </section>
+
+  <section aria-labelledby="h-engine">
+    <h2 id="h-engine">Engine</h2>
+    <div class="seg" id="engine" role="group" aria-labelledby="h-engine"></div>
+    <div class="panel" id="panel-0">
+      <div class="row"><label for="look">LUT</label><select id="look"></select></div>
+    </div>
+    <div class="panel" id="panel-1" hidden></div>
+    <div class="panel" id="panel-2" hidden></div>
+    <div class="panel" id="panel-3" hidden></div>
+    <p class="note" id="engine-note"></p>
+  </section>
+
+  <section aria-labelledby="h-fx" id="sec-fx">
+    <h2 id="h-fx">Effects</h2>
+    <div id="levels"></div>
+  </section>
+
+  <section aria-labelledby="h-stamp" id="sec-stamp">
+    <h2 id="h-stamp">Date stamp</h2>
+    <div class="row"><label for="stamp">Date stamp</label><select id="stamp"></select></div>
+    <div class="row"><span class="label" id="l-smode">Stamp shows</span><div class="seg" id="smode" role="group" aria-labelledby="l-smode"></div></div>
+    <div class="row"><label for="stext">Stamp text</label><input type="text" id="stext" maxlength="24" spellcheck="false" autocomplete="off"></div>
+    <p class="note" id="stamp-note"></p>
+  </section>
+
+  <section aria-labelledby="h-shot">
+    <h2 id="h-shot">Shot</h2>
+    <div class="row"><label for="seed">Seed</label><div style="display:flex;gap:8px"><input type="number" id="seed" min="0" max="4294967295"><button class="btn" id="reroll">New shot</button></div></div>
+    <p class="note">Grain, light leaks and dust differ on every camera shot. New shot picks another.</p>
+  </section>
+
+  <section aria-labelledby="h-camera">
+    <h2 id="h-camera">On the camera</h2>
+    <div class="osd" id="osd" aria-label="Shooting-screen line"></div>
+    <pre class="menu" id="menu"></pre>
+    <button class="btn" id="copy">Copy menu settings</button>
+  </section>
+
+  <footer>
+    Effects: the Zrno C kernels (GPL-2.0-or-later), compiled unchanged to WebAssembly; output matches the camera build byte for byte on the same frame. Sensor backups are developed here like LibRaw's defaults, not by Canon, so base colour differs from the camera's JPEG.
+    Looks other than Warm 200 derive from the <a href="https://rawtherapee.com/shared/HaldCLUT.zip">RawTherapee Film Simulation Collection</a> by Pat David, Pavlov Dmitry, Michael Ezra et al., <a href="https://creativecommons.org/licenses/by-sa/4.0/">CC BY-SA 4.0</a>, resampled to 17³. Film names describe approximations, not official products.
+  </footer>
+</aside>
+
+<main>
+  <div class="toolbar">
+    <div class="seg" id="view" role="group" aria-label="View"></div>
+    <div class="seg zoom" id="zoom" role="group" aria-label="Zoom"></div>
+    <span class="status" id="status" role="status">Starting…</span>
+  </div>
+  <div class="viewer">
+    <div class="stage" id="stage">
+      <canvas id="canvas" width="912" height="684" aria-label="Rendered photo"></canvas>
+      <span class="badge" id="badge"></span>
+    </div>
+    <div class="loading" id="loading" hidden>
+      <div class="loading-box" id="loading-box">
+        <img id="loading-thumb" alt="">
+        <div class="loading-info"><span id="loading-text"></span><span class="loading-bar"><span id="loading-fill"></span></span></div>
+      </div>
+    </div>
+  </div>
+  <nav class="strip" id="strip" aria-label="Shots" hidden>
+    <div class="strip-head">
+      <span id="strip-title"></span>
+      <span class="hint">← → step through shots</span>
+    </div>
+    <ol class="strip-list" id="strip-list"></ol>
+  </nav>
+</main>
+</div>
+
+<script>
+const LOOKS = [
+  ['GOLD17.LUT', 'Warm 200'], ['PORTRA.LUT', 'Portra 400'], ['VELVIA.LUT', 'Velvia 50'],
+  ['KCHROME.LUT', 'Kodachrome 64'], ['HP5.LUT', 'Ilford HP5'], ['EKTAR.LUT', 'Ektar 100'],
+  ['P800.LUT', 'Portra 800'], ['F400H.LUT', 'Fuji 400H'], ['PROVIA.LUT', 'Provia 100F'],
+  ['ASTIA.LUT', 'Astia 100F'], ['SUPERIA.LUT', 'Superia 200'], ['POLA669.LUT', 'Polaroid 669'],
+  ['TRIX.LUT', 'Tri-X 400'], ['ACROS.LUT', 'Acros 100'], ['BLEACH.LUT', 'Bleach Bypass'],
+  ['TEALORG.LUT', 'Teal & Orange'],
+];
+const DARK_DUST = new Set(['VELVIA.LUT', 'KCHROME.LUT', 'PROVIA.LUT', 'ASTIA.LUT', 'POLA669.LUT']);
+const LEVELS = ['Off', 'Low', 'Mid', 'High'];
+const EFFECTS = [
+  ['halation', 'Halation', 'H'], ['bloom', 'Bloom', 'B'], ['soft', 'Soft focus', 'F'], ['grain', 'Grain', 'G'],
+  ['vignette', 'Vignette', 'V'], ['leaks', 'Light leaks', 'L'], ['toy', 'Toy lens', 'T'],
+  ['dust', 'Dust & scratches', 'D'],
+];
+const STAMPS = ['Off', 'Bottom right', 'Bottom left', 'Top right', 'Top left'];
+const ENGINES = ['Film', 'ZrnoBoy', 'Print', 'Grade'];
+const GRADE_NEUTRAL = Array.from({ length: 40 }, (_, i) => (i === 10 || i === 12 ? 3 : 0));
+const SHARP_NAMES = ['Original', 'Soft', 'Off', 'Crisp'];
+const HCOL_NAMES = ['Red', 'Amber'];
+const SMODES = ["'YY MM DD", "DD MM 'YY", 'Text'];
+
+const s = {
+  look: 'PORTRA.LUT', halation: 2, bloom: 1, soft: 0, grain: 1, vignette: 1, leaks: 0, toy: 0, dust: 1,
+  stamp: 1, smode: 0, stext: 'ZRNO', seed: 0x2f6e8a1d, view: 0, zoom: 0, temp: 0, tint: 0, dest: 0,
+  // Engine: 0 Film, 1 ZrnoBoy, 2 Print, 3 Grade, with each engine's settings
+  // as the camera stores them (film_gboy.h, film_riso.h, film_grade.h).
+  engine: 0,
+  gboy: [0, 1, 7, 3, 2, 1, 0],              // palette, frame, contrast, brightness, edges, dither, resolution
+  riso: [0, 0, 0, 2, 2, 3, 0, 0, 0],        // inks, separation, screen, noise, register, flaws, paper, style, variant
+  grade: GRADE_NEUTRAL.slice(), gradeSlot: 0, hsl: 0,
+  sharp: 0, hcol: 0,                        // Sharpening and Halation colour: the camera's, not shown here
+};
+let source = { kind: 'chart', date: null, wb: null, ms: 0, name: 'Test chart' };
+let ready = false, renderId = 0, shownId = 0, renderTimer = 0, loadedSeq = 0, shownSeq = 0;
+// Every load gets a number; a slower earlier load that finishes late is dropped.
+let loadSeq = 0;
+
+const $ = (id) => document.getElementById(id);
+const worker = new Worker('worker.js');
+
+function segmented(el, labels, key, onChange) {
+  el.innerHTML = '';
+  labels.forEach((label, i) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.addEventListener('click', () => { s[key] = i; sync(); onChange && onChange(); });
+    el.appendChild(b);
+  });
+}
+function markSegmented(el, value) {
+  [...el.children].forEach((b, i) => b.setAttribute('aria-pressed', String(i === value)));
+}
+
+// Controls -----------------------------------------------------------------
+LOOKS.forEach(([file, label]) => { const o = new Option(label, file); $('look').add(o); });
+STAMPS.forEach((label, i) => $('stamp').add(new Option(label, String(i))));
+for (const [key, label] of EFFECTS) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const l = document.createElement('span');
+  l.className = 'label'; l.id = 'l-' + key; l.textContent = label;
+  const seg = document.createElement('div');
+  seg.className = 'seg'; seg.id = 'seg-' + key; seg.setAttribute('role', 'group'); seg.setAttribute('aria-labelledby', l.id);
+  row.append(l, seg);
+  $('levels').appendChild(row);
+  segmented(seg, LEVELS, key, requestRender);
+}
+segmented($('smode'), SMODES, 'smode', requestRender);
+segmented($('view'), ['With effects', 'Look only', 'Developed'], 'view', requestRender);
+segmented($('zoom'), ['Fit', '100%'], 'zoom', applyZoom);
+$('look').addEventListener('change', (e) => { s.look = e.target.value; sync(); requestRender(); });
+$('stamp').addEventListener('change', (e) => { s.stamp = +e.target.value; sync(); requestRender(); });
+$('stext').addEventListener('input', (e) => { s.stext = e.target.value; if (s.smode !== 2) s.smode = 2; sync(); requestRender(); });
+$('seed').addEventListener('change', (e) => { s.seed = (Number(e.target.value) >>> 0); sync(); requestRender(); });
+$('reroll').addEventListener('click', () => { s.seed = (Math.random() * 0x100000000) >>> 0; sync(); requestRender(); });
+for (const key of ['temp', 'tint']) $(key).addEventListener('input', (e) => { s[key] = +e.target.value; sync(); requestWb(); });
+$('wb-reset').addEventListener('click', () => { s.temp = s.tint = 0; sync(); requestWb(); });
+$('open').addEventListener('click', () => $('file').click());
+$('file').addEventListener('change', (e) => { openFileList(e.target.files, 'Picked files'); e.target.value = ''; });
+$('usb').addEventListener('click', openCamera);
+if (!navigator.usb) $('usb').hidden = true;
+$('chart').addEventListener('click', loadChart);
+$('help-btn').addEventListener('click', (e) => {
+  const open = $('help').hidden;
+  $('help').hidden = !open;
+  e.currentTarget.setAttribute('aria-expanded', String(open));
+});
+segmented($('dest'), ['This computer', 'Camera card'], 'dest', () => { saveMessage = null; updateSave(); });
+$('copy').addEventListener('click', async () => {
+  try { await navigator.clipboard.writeText($('menu').textContent); $('copy').textContent = 'Copied'; }
+  catch { $('copy').textContent = 'Copy blocked: select the text instead'; }
+  setTimeout(() => { $('copy').textContent = 'Copy menu settings'; }, 1600);
+});
+
+function printable(t) {
+  return [...t].map((c) => { const k = c.charCodeAt(0); return k >= 32 && k <= 126 ? c : '?'; }).join('').slice(0, 24);
+}
+function stampDate() {
+  if (source.date) {
+    const m = /^(\d{4}):(\d{2}):(\d{2})/.exec(source.date);
+    if (m) return { y: +m[1], mo: +m[2], d: +m[3], from: source.jpegFound ? 'the camera JPEG' : 'the backup file' };
+  }
+  const n = new Date();
+  return { y: n.getFullYear(), mo: n.getMonth() + 1, d: n.getDate(), from: 'today (no capture date)' };
+}
+function stampText() {
+  if (s.smode === 2) return printable(s.stext);
+  const { y, mo, d } = stampDate();
+  const p = (v) => String(v).padStart(2, '0');
+  return s.smode === 0 ? `'${p(y % 100)} ${p(mo)} ${p(d)}` : `${p(d)} ${p(mo)} '${p(y % 100)}`;
+}
+function label(file) { return LOOKS.find((l) => l[0] === file)[1]; }
+
+function sync() {
+  for (const [key] of EFFECTS) markSegmented($('seg-' + key), s[key]);
+  markSegmented($('smode'), s.smode);
+  markSegmented($('view'), s.view);
+  markSegmented($('zoom'), s.zoom);
+  $('temp').value = s.temp; $('temp-v').textContent = (s.temp > 0 ? '+' : '') + s.temp;
+  $('tint').value = s.tint; $('tint-v').textContent = (s.tint > 0 ? '+' : '') + s.tint;
+  markSegmented($('dest'), s.dest);
+  $('look').value = s.look;
+  $('stamp').value = String(s.stamp);
+  if (document.activeElement !== $('stext')) $('stext').value = s.stext;
+  $('seed').value = String(s.seed >>> 0);
+  const sd = stampDate();
+  $('stamp-note').textContent = s.smode === 2
+    ? 'Printable ASCII, up to 24 characters; anything else prints as ?.'
+    : `Date from ${sd.from}. The camera uses its clock at the moment of the shot.`;
+  syncEngine();
+  if (s.engine !== 0) { $('osd').textContent = engineSummary(); $('menu').textContent = engineMenu(); syncLooks(); return; }
+  // The camera's shooting-screen line (film_ui.c) and menu values.
+  let line = `FILM ${label(s.look)}`;
+  for (const [key, , code] of EFFECTS) if (s[key]) line += ` ${code}${s[key]}`;
+  if (s.stamp) line += ' S';
+  $('osd').textContent = line.trimEnd().slice(0, 44);
+  $('menu').textContent = [
+    'Film processing   On',
+    `LUT               ${label(s.look)}`,
+    ...EFFECTS.map(([key, name]) => `${name.padEnd(18)}${LEVELS[s[key]]}`),
+    `Date stamp        ${STAMPS[s.stamp]}`,
+    `Stamp shows       ${SMODES[s.smode]}`,
+    `Stamp text        ${printable(s.stext) || '(none)'}`,
+    `Sharpening        ${SHARP_NAMES[s.sharp]}`,
+    `Halation colour   ${HCOL_NAMES[s.hcol]}`,
+  ].join('\n');
+  syncLooks();
+}
+
+// Viewer -----------------------------------------------------------------
+const canvas = $('canvas'), ctx = canvas.getContext('2d'), stage = $('stage');
+// Fit: the largest size that shows the whole image inside the stage, limited
+// by whichever of width or height runs out first (portrait or landscape).
+// 100%: one image pixel per screen pixel.
+function sizeCanvas() {
+  let scale = 1;
+  if (s.zoom === 0) {
+    const pad = 32;
+    scale = Math.min((stage.clientWidth - pad) / canvas.width, (stage.clientHeight - pad) / canvas.height, 1);
+    scale = Math.max(scale, 0.01);
+  }
+  canvas.style.width = Math.round(canvas.width * scale) + 'px';
+  canvas.style.height = Math.round(canvas.height * scale) + 'px';
+  sizeLoading();
+}
+// The loader is always the fitted size of a G12 frame.
+function sizeLoading() {
+  const W = 3648, H = 2736, pad = 32;
+  const scale = Math.max(Math.min((stage.clientWidth - pad) / W, (stage.clientHeight - pad) / H, 1), 0.01);
+  $('loading-box').style.width = Math.round(W * scale) + 'px';
+  $('loading-box').style.height = Math.round(H * scale) + 'px';
+}
+new ResizeObserver(sizeCanvas).observe(stage);
+function applyZoom(focus) {
+  stage.classList.toggle('zoomed', s.zoom === 1);
+  sizeCanvas();
+  if (s.zoom === 1) {
+    const fx = focus ? focus.x : 0.5, fy = focus ? focus.y : 0.5;
+    requestAnimationFrame(() => {
+      stage.scrollLeft = fx * canvas.width + 16 - stage.clientWidth / 2;
+      stage.scrollTop = fy * canvas.height + 16 - stage.clientHeight / 2;
+    });
+  }
+}
+let drag = null;
+canvas.addEventListener('click', (e) => {
+  if (drag && drag.moved) return;
+  if (s.zoom === 0) {
+    const r = canvas.getBoundingClientRect();
+    s.zoom = 1; sync(); applyZoom({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+  } else { s.zoom = 0; sync(); applyZoom(); }
+});
+stage.addEventListener('pointerdown', (e) => {
+  if (s.zoom !== 1) return;
+  drag = { x: e.clientX, y: e.clientY, l: stage.scrollLeft, t: stage.scrollTop, moved: false };
+  stage.classList.add('dragging');
+});
+window.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (Math.abs(dx) + Math.abs(dy) > 4) drag.moved = true;
+  stage.scrollLeft = drag.l - dx; stage.scrollTop = drag.t - dy;
+});
+window.addEventListener('pointerup', () => {
+  stage.classList.remove('dragging');
+  setTimeout(() => { drag = null; }, 0);
+});
+['dragenter', 'dragover'].forEach((t) => stage.addEventListener(t, (e) => { e.preventDefault(); stage.classList.add('dropping'); }));
+['dragleave', 'drop'].forEach((t) => stage.addEventListener(t, (e) => { e.preventDefault(); stage.classList.remove('dropping'); }));
+stage.addEventListener('drop', async (e) => {
+  // Entries and handles must be taken before the first await; the drop data
+  // goes away after. Chrome and Edge give a folder handle, which can be saved to.
+  const items = [...e.dataTransfer.items];
+  const handles = items.map((it) => (it.getAsFileSystemHandle ? it.getAsFileSystemHandle() : null));
+  const entries = items.map((it) => it.webkitGetAsEntry && it.webkitGetAsEntry()).filter(Boolean);
+  const files = e.dataTransfer.files;
+  if (handles.length === 1 && handles[0]) {
+    const h = await handles[0].catch(() => null);
+    if (h && h.kind === 'directory') { openDirectory(h); return; }
+  }
+  if (entries.length) openEntries(entries);
+  else openFileList(files, 'Dropped files');
+});
+
+function setStatus(text, bad) { $('status').textContent = text; $('status').classList.toggle('bad', !!bad); }
+function requestRender() {
+  sync();
+  if (!ready) return;
+  clearTimeout(renderTimer);
+  renderTimer = setTimeout(() => {
+    renderTimer = 0;
+    renderId++;
+    setStatus('Rendering…');
+    worker.postMessage({
+      type: 'render', id: renderId, seq: loadedSeq, mode: s.view, look: s.look, text: stampText(),
+      settings: { halation: s.halation, bloom: s.bloom, soft: s.soft, grain: s.grain, vignette: s.vignette, leaks: s.leaks,
+        toy: s.toy, dust: s.dust, dustDark: DARK_DUST.has(s.look) ? 1 : 0, stamp: s.stamp, seed: s.seed },
+      engine: s.engine, values: s.engine === 1 ? s.gboy : s.engine === 2 ? s.riso : s.grade, exposure: source.exposure || null,
+    });
+  }, 40);
+}
+
+// Shots -------------------------------------------------------------------
+// The camera saves each Zrno shot's sensor data as A/FGRAW/Rnnnnnnn.RAW
+// and logs which JPEG it became in A/CHDK/FILM/NATIVE.TXT ("stage=jpeg_saved
+// ... raw=A/FGRAW/R0000001.RAW jpg=A/DCIM/100___01/IMG_0001.JPG"). Opening
+// the card (or a folder with FGRAW, NATIVE.TXT and DCIM) lists every backup,
+// paired with its camera JPEG for the thumbnail and the capture date. Hidden
+// files are skipped: macOS leaves ._ copies of every file on FAT cards.
+const RAW_RE = /\.raw$/i, JPEG_RE = /\.jpe?g$/i, NATIVE_RE = /^native\.txt$/i, STAGELOG_RE = /^stagelog\.txt$/i;
+const SET_RE = /\.set$/i, CR2_RE = /\.cr2$/i;
+const wanted = (name) => RAW_RE.test(name) || JPEG_RE.test(name) || NATIVE_RE.test(name) || STAGELOG_RE.test(name) || SET_RE.test(name) || CR2_RE.test(name);
+let shots = [], current = -1, thumbUrls = [];
+// The opened folder's handle when the browser gives one (Chrome, Edge): saves go into it.
+let cardDir = null;
+// The camera, when the shots came over USB: saves go to its card.
+let cardUsb = null, usbCam = null;
+const thumbObserver = new IntersectionObserver((list) => {
+  for (const e of list) {
+    if (!e.isIntersecting) continue;
+    thumbObserver.unobserve(e.target);
+    loadThumb(shots[+e.target.dataset.i], e.target);
+  }
+}, { root: $('strip-list'), rootMargin: '0px 600px' });
+
+async function openDirectory(dir) {
+  setStatus('Reading ' + dir.name + '…');
+  const out = [];
+  out.dirs = {};
+  try { await walkHandle(dir, dir.name + '/', out); }
+  catch (err) { setStatus('Could not read ' + dir.name + ': ' + (err.message || err), true); return; }
+  await setShots(out, dir.name, dir);
+  loadLooks(out.dirs.film ? looksOnCard(out.dirs.film, dir) : null);
+}
+async function walkHandle(dir, path, out) {
+  for await (const [name, h] of dir.entries()) {
+    if (name.startsWith('.')) continue;
+    if (h.kind === 'directory' && /(^|\/)CHDK\/$/i.test(path) && /^FILM$/i.test(name) && out.dirs) out.dirs.film = h;
+    if (h.kind === 'directory') await walkHandle(h, path + name + '/', out);
+    else if (wanted(name)) out.push({ name, path: path + name, get: () => h.getFile(), remove: () => dir.removeEntry(name) });
+  }
+}
+function openFileList(list, title) {
+  const files = [...list];
+  if (!files.length) return;
+  const out = files.filter((f) => wanted(f.name))
+    .map((f) => ({ name: f.name, path: f.webkitRelativePath || f.name, get: async () => f }));
+  setShots(out, title || (files[0].webkitRelativePath || '').split('/')[0] || 'Files');
+  loadLooks(usbCam ? looksOverUsb(usbCam) : null);
+}
+async function openEntries(entries) {
+  setStatus('Reading dropped items…');
+  const out = [];
+  const readAll = (reader) => new Promise((resolve, reject) => {
+    const all = [];
+    const next = () => reader.readEntries((batch) => { if (!batch.length) resolve(all); else { all.push(...batch); next(); } }, reject);
+    next();
+  });
+  async function walk(entry, path) {
+    if (entry.name.startsWith('.')) return;
+    if (entry.isDirectory) {
+      for (const child of await readAll(entry.createReader())) await walk(child, path + entry.name + '/');
+    } else if (wanted(entry.name)) {
+      const file = await new Promise((resolve, reject) => entry.file(resolve, reject));
+      out.push({ name: entry.name, path: path + entry.name, get: async () => file });
+    }
+  }
+  try { for (const e of entries) await walk(e, ''); }
+  catch (err) { setStatus('Could not read the dropped items: ' + (err.message || err), true); return; }
+  setShots(out, entries.length === 1 && entries[0].isDirectory ? entries[0].name : 'Dropped files');
+  loadLooks(usbCam ? looksOverUsb(usbCam) : null);
+}
+
+// Over USB --------------------------------------------------------------------
+// The camera stays plugged in and its card is read through CHDK's PTP
+// extension (ptp.js). The listing is one Lua call; a backup downloads when
+// its shot is opened (the last few stay in memory), and a camera JPEG is
+// only ever read for its first 64 KB, which hold the Exif date and the
+// thumbnail.
+const USB_LIST = `local o={}
+local function walk(p,deep)
+  local t=os.listdir(p) if not t then return end
+  for _,n in ipairs(t) do
+    if n:sub(1,1)~='.' then
+      local q=p..'/'..n local s=os.stat(q)
+      if s then
+        if s.is_dir then if deep then walk(q,false) end
+        else o[#o+1]=q..'\\t'..s.size..'\\t'..s.mtime end
+      end
+    end
+  end
+end
+walk('A/FGRAW',false) walk('A/DCIM',true)
+for _,q in ipairs({'A/CHDK/FILM/NATIVE.TXT','A/CHDK/FILM/STAGELOG.TXT','A/CHDK/FILM/LOOKS.TXT'}) do
+  local s=os.stat(q)
+  if s then o[#o+1]=q..'\\t'..s.size..'\\t'..s.mtime end
+end
+return table.concat(o,'\\n')`;
+const USB_HEAD = 65536, USB_KEEP = 3;
+let usbModule = null;
+async function openCamera() {
+  if (!navigator.usb) return;
+  try {
+    usbModule = usbModule || await import('./ptp.js');
+    if (!usbCam) {
+      setStatus('Connecting to the camera…');
+      usbCam = await usbModule.ChdkCamera.known() || await usbModule.ChdkCamera.request();
+    }
+    setStatus('Reading the card over USB…');
+    const listing = await usbCam.lua(USB_LIST, { timeout: 60000 });
+    const cam = usbCam, kept = [];
+    // CHDK gives the camera's local time as if it were UTC.
+    const offset = new Date().getTimezoneOffset() * 60000;
+    const out = [];
+    for (const line of (listing || '').split('\n')) {
+      const [path, size, mtime] = line.split('\t');
+      const name = path ? path.split('/').pop() : '';
+      if (!name || !wanted(name)) continue;
+      const lastModified = +mtime * 1000 + offset, isJpeg = JPEG_RE.test(name), isRaw = RAW_RE.test(name);
+      let cached = null;
+      const get = () => {
+        if (cached) return cached;
+        const fetch = isJpeg ? cam.head(path, USB_HEAD)
+          : cam.download(path, isRaw ? (got, total) => loadProgress(path, got, total) : null);
+        cached = fetch.then((data) => new File([data], name, { lastModified }));
+        cached.catch(() => { cached = null; });
+        if (isRaw) {
+          // Keep only the last few backups (15.6 MB each).
+          kept.push(() => { cached = null; });
+          while (kept.length > USB_KEEP) kept.shift()();
+        }
+        return cached;
+      };
+      const remove = async () => {
+        await cam.lua(`local ok,err=os.remove(${usbModule.luaString(path)}) if not ok then error(err or 'cannot delete') end`);
+      };
+      out.push({ name, path, size: +size, get, remove });
+    }
+    await setShots(out, `${cam.name} over USB`, null, cam);
+    loadLooks(looksOverUsb(cam));
+  } catch (err) {
+    if (err.name === 'NotFoundError') { setStatus('No camera picked.'); return; }
+    setStatus('Camera: ' + (err.message || err), true);
+    if (usbCam) { const c = usbCam; usbCam = null; c.close(); }
+  }
+}
+navigator.usb?.addEventListener('disconnect', (e) => {
+  if (!usbCam || e.device !== usbCam.device) return;
+  usbCam = null;
+  setStatus('The camera was unplugged. Connect it again to keep going.', true);
+});
+
+// Engines ----------------------------------------------------------------------
+// ZrnoBoy, Print and Grade render with the camera's kernels (engines.rs);
+// their labels and ranges come from the kernels too (`names`, sent by the
+// worker). Film keeps the LUT, Effects and Date stamp sections.
+let names = null;
+const controls = [];
+function control(parent, labelText, input, update) {
+  const row = document.createElement('div');
+  row.className = 'row';
+  const id = 'c' + controls.length;
+  const l = document.createElement('label');
+  l.textContent = labelText; l.htmlFor = id; input.id = id;
+  row.append(l, input.wrap || input);
+  parent.appendChild(row);
+  const c = { row, update };
+  controls.push(c);
+  return c;
+}
+function selectControl(parent, labelText, options, get, set) {
+  const sel = document.createElement('select');
+  sel.addEventListener('change', () => { set(+sel.value); requestRender(); });
+  return control(parent, labelText, sel, () => {
+    const opts = typeof options === 'function' ? options() : options;
+    if (sel.dataset.opts !== opts.join('\u0001')) {
+      sel.replaceChildren(...opts.map((o, i) => new Option(o, String(i))));
+      sel.dataset.opts = opts.join('\u0001');
+    }
+    sel.value = String(get());
+  });
+}
+function sliderControl(parent, labelText, min, max, get, set, show = (v) => (v > 0 && min < 0 ? '+' : '') + v) {
+  const wrap = document.createElement('div');
+  wrap.className = 'slider';
+  const input = document.createElement('input');
+  input.type = 'range'; input.min = min; input.max = max; input.step = 1;
+  const out = document.createElement('output');
+  wrap.append(input, out);
+  input.wrap = wrap;
+  input.addEventListener('input', () => { set(+input.value); out.textContent = show(+input.value); requestRender(); });
+  return control(parent, labelText, input, () => {
+    const lo = typeof min === 'function' ? min() : min, hi = typeof max === 'function' ? max() : max;
+    input.min = lo; input.max = hi; input.value = get(); out.textContent = show(+input.value);
+  });
+}
+function segControl(parent, labelText, options, get, set) {
+  const seg = document.createElement('div');
+  seg.className = 'seg'; seg.setAttribute('role', 'group');
+  options.forEach((o, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = o;
+    b.addEventListener('click', () => { set(i); requestRender(); });
+    seg.appendChild(b);
+  });
+  const c = control(parent, labelText, seg, () => markSegmented(seg, get()));
+  c.row.querySelector('label').removeAttribute('for');
+  return c;
+}
+function sub(parent, text) { const d = document.createElement('div'); d.className = 'sub'; d.textContent = text; parent.appendChild(d); }
+// Each Print style's own noise, register and flaws when it is picked (film_rsui.c).
+const RISO_STYLE_DEFAULTS = [[2, 2, 3], [0, 2, 0], [0, 0, 0], [1, 2, 1], [3, 0, 2], [0, 1, 0], [0, 0, 0]];
+function buildEngines() {
+  segmented($('engine'), ENGINES, 'engine', requestRender);
+  const n = names, g = $('panel-0'), b = $('panel-1'), p = $('panel-2'), r = $('panel-3');
+  selectControl(g, 'Sharpening', SHARP_NAMES, () => s.sharp, (v) => { s.sharp = v; });
+  segControl(g, 'Halation colour', HCOL_NAMES, () => s.hcol, (v) => { s.hcol = v; });
+  // ZrnoBoy, in the camera menu's order.
+  selectControl(b, 'Palette', n.palettes, () => s.gboy[0], (v) => { s.gboy[0] = v; });
+  selectControl(b, 'Frame', n.frames, () => s.gboy[1], (v) => { s.gboy[1] = v; });
+  segControl(b, 'Resolution', ['128×96', '256×192'], () => s.gboy[6], (v) => { s.gboy[6] = v; });
+  sliderControl(b, 'Contrast', 1, 16, () => s.gboy[2] + 1, (v) => { s.gboy[2] = v - 1; }, String);
+  sliderControl(b, 'Brightness', -3, 3, () => s.gboy[3] - 3, (v) => { s.gboy[3] = v + 3; });
+  segControl(b, 'Edges', ['Off', 'Soft', 'Camera', 'Strong'], () => s.gboy[4], (v) => { s.gboy[4] = v; });
+  segControl(b, 'Dither', ['On', 'Off'], () => (s.gboy[5] ? 0 : 1), (v) => { s.gboy[5] = v === 0 ? 1 : 0; });
+  // Print: the rows depend on the style, as on the camera.
+  selectControl(p, 'Style', n.styles, () => s.riso[7], (v) => {
+    s.riso[7] = v; s.riso[8] = 0; [s.riso[3], s.riso[4], s.riso[5]] = RISO_STYLE_DEFAULTS[v];
+  });
+  const riso = (c, when) => { c.when = when; return c; };
+  riso(selectControl(p, 'Inks', n.inks, () => s.riso[0], (v) => { s.riso[0] = v; }), () => s.riso[7] === 0);
+  riso(selectControl(p, 'Palette', () => n.variants[s.riso[7]] || [], () => s.riso[8], (v) => { s.riso[8] = v; }), () => s.riso[7] !== 0);
+  riso(segControl(p, 'Separation', n.separation, () => s.riso[1], (v) => { s.riso[1] = v; }), () => s.riso[7] === 0);
+  riso(segControl(p, 'Screen', n.screen, () => s.riso[2], (v) => { s.riso[2] = v; }), () => s.riso[7] === 0);
+  riso(selectControl(p, 'Noise', n.noise, () => s.riso[3], (v) => { s.riso[3] = v; }), () => s.riso[7] !== 6);
+  riso(segControl(p, 'Register', n.register, () => s.riso[4], (v) => { s.riso[4] = v; }), () => s.riso[7] !== 6);
+  riso(segControl(p, 'Print flaws', n.flaws, () => s.riso[5], (v) => { s.riso[5] = v; }), () => s.riso[7] !== 6);
+  riso(segControl(p, 'Paper', n.paper, () => s.riso[6], (v) => { s.riso[6] = v; }), () => s.riso[7] === 0);
+  // Grade, in the camera menu's order.
+  const range = (f) => n.gradeRange[f];
+  const field = (label, f) => sliderControl(r, label, range(f)[0], range(f)[1], () => s.grade[f], (v) => { s.grade[f] = v; });
+  sub(r, 'Tone');
+  [['Contrast', 0], ['Midtones', 1], ['Shadows', 2], ['Highlights', 3], ['Blacks', 37], ['Whites', 38]].forEach(([l, f]) => field(l, f));
+  sliderControl(r, 'Fade', 0, 5, () => s.grade[4], (v) => { s.grade[4] = v; }, (v) => (v ? String(v) : 'Off'));
+  sub(r, 'Colour');
+  [['Temperature', 5], ['Tint', 6], ['Saturation', 7], ['Vibrance', 8]].forEach(([l, f]) => field(l, f));
+  selectControl(r, 'Black & white', n.monos, () => s.grade[39], (v) => { s.grade[39] = v; });
+  sub(r, 'HSL');
+  selectControl(r, 'HSL colour', n.hues, () => s.hsl, (v) => { s.hsl = v; });
+  for (const [l, base] of [['Hue', 13], ['Saturation', 21], ['Lightness', 29]]) {
+    sliderControl(r, l, () => range(base + s.hsl)[0], () => range(base + s.hsl)[1], () => s.grade[base + s.hsl], (v) => { s.grade[base + s.hsl] = v; });
+  }
+  sub(r, 'Split toning');
+  const tones = ['Off', ...n.hues];
+  selectControl(r, 'Shadow tone', tones, () => s.grade[9], (v) => { s.grade[9] = v; });
+  sliderControl(r, 'Shadow amount', 1, 5, () => s.grade[10], (v) => { s.grade[10] = v; }, String);
+  selectControl(r, 'Highlight tone', tones, () => s.grade[11], (v) => { s.grade[11] = v; });
+  sliderControl(r, 'Highlight amount', 1, 5, () => s.grade[12], (v) => { s.grade[12] = v; }, String);
+  const reset = document.createElement('button');
+  reset.className = 'btn small'; reset.textContent = 'Reset grade';
+  reset.addEventListener('click', () => { s.grade = GRADE_NEUTRAL.slice(); requestRender(); });
+  r.appendChild(reset);
+  selectControl(r, 'Sharpening', SHARP_NAMES, () => s.sharp, (v) => { s.sharp = v; });
+}
+function syncEngine() {
+  if (!names) return;
+  markSegmented($('engine'), s.engine);
+  for (let e = 0; e < 4; e++) $('panel-' + e).hidden = s.engine !== e;
+  $('sec-fx').hidden = $('sec-stamp').hidden = s.engine !== 0;
+  for (const c of controls) { c.row.hidden = c.when ? !c.when() : false; if (!c.row.hidden) c.update(); }
+  $('engine-note').textContent = [
+    'Sharpening and Halation colour are the camera\'s: they are saved with a look but not shown here.',
+    'ZrnoBoy replaces the frame with its own picture. The Viewfinder frame prints the exposure from the camera JPEG.',
+    'Print replaces the frame with its print. Each style has its own noise, register and flaws.',
+    'Grade builds the colour table the camera installs, applied here as Canon\'s develop does. Grade shots on the camera make no backup, so here it grades backups from the other engines.',
+  ][s.engine];
+}
+function engineSummary() {
+  if (s.engine === 1) return `ZRNOBOY ${names.palettes[s.gboy[0]]} · ${names.frames[s.gboy[1]]}`;
+  if (s.engine === 2) return `PRINT ${names.styles[s.riso[7]]}` + (s.riso[7] ? ` · ${(names.variants[s.riso[7]] || [])[s.riso[8]] || ''}` : ` · ${names.inks[s.riso[0]]}`);
+  return `GRADE ${s.gradeSlot + 1}`;
+}
+function engineMenu() {
+  const rows = [['Engine', ENGINES[s.engine]]];
+  for (const c of controls) {
+    if (!c.row.closest('#panel-' + s.engine) || c.row.hidden) continue;
+    const input = c.row.querySelector('select, input, .seg');
+    const v = input.matches('select') ? input.selectedOptions[0]?.textContent
+      : input.matches('.seg') ? input.querySelector('[aria-pressed="true"]')?.textContent : c.row.querySelector('output').textContent;
+    rows.push([c.row.querySelector('label').textContent, v || '']);
+  }
+  return rows.map(([k, v]) => k.padEnd(18) + v).join('\n');
+}
+
+// Looks --------------------------------------------------------------------------
+// The camera's saved looks, A/CHDK/FILM/LOOKS.TXT (film_lut.c presets_*):
+// one per line, "Name|LUT file|key=value ...|stamp text" for Film and
+// "Name|ZrnoBoy|...", "Name|Print|...", "Name|Grade|..." for the others; at
+// most 16; names up to 20 printable characters. A look is applied to the
+// open photo with a click; saving, updating, renaming and deleting write the
+// file back to the camera and leave LOOKSRLD.TXT, which tells Zrno to read
+// it again (film_lut.c presets_reload_poll). Each change starts from the
+// file as it is on the card, so looks saved on the camera meanwhile stay.
+const LOOKS_PATH = 'A/CHDK/FILM/LOOKS.TXT', LOOKS_RELOAD = 'A/CHDK/FILM/LOOKSRLD.TXT', LOOKS_MAX = 16, NAME_MAX = 20;
+// The Look row shows up to 100 px of the menu font, and "*" (8 px) after a
+// changed look: names are kept to 92 px.
+const NAME_PX = 92;
+let menuFont = null;
+fetch('menufont.json').then((r) => (r.ok ? r.json() : null)).then((f) => { menuFont = f; }).catch(() => {});
+function nameWidth(name) {
+  if (!menuFont) return name.length * 10;
+  return [...name].reduce((w, c) => w + (menuFont.widths[c.charCodeAt(0) - menuFont.first] ?? 10), 0);
+}
+function nameProblem(name, ignore = null) {
+  if (!name) return 'Give the look a name.';
+  if (!/^[\x20-\x7e]+$/.test(name)) return 'Letters, digits and plain punctuation only.';
+  if (name.includes('|')) return 'A name cannot contain |.';
+  if (name.startsWith('#')) return 'A name cannot start with #.';
+  if (name.length > NAME_MAX) return `Up to ${NAME_MAX} characters.`;
+  const w = nameWidth(name);
+  if (w > NAME_PX) return `Too wide for the camera's menu by ${w - NAME_PX} px: shorten it.`;
+  if (looks.items.some((it) => it.name.toLowerCase() === name.toLowerCase() && it !== ignore)) return 'A look with this name exists.';
+  return '';
+}
+function showFit(el, name, ignore) {
+  const problem = nameProblem(name.trim(), ignore);
+  el.textContent = problem || `Fits the camera's menu (${nameWidth(name.trim())} of ${NAME_PX} px).`;
+  el.classList.toggle('over', !!problem);
+  return !problem;
+}
+
+const looks = { items: [], comments: [], io: null, note: '' };
+const lower = (t) => t.toLowerCase();
+function parseLooks(text) {
+  const items = [], comments = [];
+  for (const raw of text.split('\n')) {
+    const line = raw.replace(/\r$/, '');
+    if (!line) continue;
+    if (line.startsWith('#')) { comments.push(line); continue; }
+    const f = line.split('|');
+    if (f.length < 3 || items.length >= LOOKS_MAX) continue;
+    const name = f[0].trim(), second = f[1].trim();
+    if (!name || !second || second.length > 12) continue;
+    const kind = ['zrnoboy', 'print', 'grade'].indexOf(lower(second)) + 1;
+    const kv = {};
+    for (const tok of f[2].split(/[\s,]+/)) { const i = tok.indexOf('='); if (i > 0) kv[lower(tok.slice(0, i))] = tok.slice(i + 1); }
+    items.push({ name, line, kind, file: kind ? '' : second.toUpperCase(), kv, text: f.slice(3).join('|') });
+  }
+  return { items, comments };
+}
+// A Film value by name (any case) or digit, as film_lut.c pv_value reads it.
+function named(v, list, fallback = 0) {
+  if (v === undefined) return fallback;
+  if (/^\d$/.test(v)) return +v < list.length ? +v : fallback;
+  const i = list.findIndex((n) => lower(n) === lower(v));
+  return i >= 0 ? i : lower(v) === 'canon' && list === SHARP_NAMES ? 0 : fallback;
+}
+const num = (v, lo, hi, fallback) => (v !== undefined && /^[+-]?\d{1,4}$/.test(v) && +v >= lo && +v <= hi ? +v : fallback);
+const STAMP_TOKENS = ['Off', 'BottomRight', 'BottomLeft', 'TopRight', 'TopLeft'], SMODE_TOKENS = ['YYMMDD', 'DDMMYY', 'Text'];
+const FILM_KEYS = ['halation', 'bloom', 'soft', 'sharpening', 'grain', 'vignette', 'leaks', 'toy', 'dust', 'stamp', 'shows', 'halationcolour'];
+const GBOY_KEYS = [['palette', 0, 10], ['frame', 1, 11], ['resolution', 6, 2], ['contrast', 2, 16], ['brightness', 3, 7], ['edges', 4, 4], ['dither', 5, 2]];
+const RISO_KEYS = [['style', 7, 7], ['palette', 8, 255], ['inks', 0, 7], ['separation', 1, 2], ['screen', 2, 2], ['noise', 3, 5], ['register', 4, 4], ['flaws', 5, 4], ['paper', 6, 3]];
+function gradeKey(f) {
+  const words = ['contrast', 'midtones', 'shadows', 'highlights', 'fade', 'temperature', 'tint', 'saturation', 'vibrance', 'shadowtone', 'shadowamount', 'highlighttone', 'highlightamount'];
+  if (f < 13) return words[f];
+  if (f >= 37) return ['blacks', 'whites', 'blackwhite'][f - 37];
+  const k = Math.floor((f - 13) / 8);
+  return lower(names.hues[(f - 13) % 8]).replace(/\s+/g, '') + ['hue', 'saturation', 'lightness'][k];
+}
+// The settings a look holds, in the editor's terms.
+function lookState(it) {
+  const st = { engine: it.kind };
+  const kv = it.kv;
+  if (it.kind === 0) {
+    if (LOOKS.some((l) => l[0] === it.file)) st.look = it.file;
+    for (const [key, field] of [['halation', 'halation'], ['bloom', 'bloom'], ['soft', 'soft'], ['grain', 'grain'], ['vignette', 'vignette'], ['leaks', 'leaks'], ['toy', 'toy'], ['dust', 'dust']]) st[field] = named(kv[key], LEVELS);
+    st.sharp = named(kv.sharpening, SHARP_NAMES);
+    st.stamp = named(kv.stamp, STAMP_TOKENS);
+    st.smode = st.stamp ? named(kv.shows, SMODE_TOKENS) : 0;
+    st.hcol = st.halation ? named(kv.halationcolour, HCOL_NAMES) : 0;
+    if (st.stamp && st.smode === 2) st.stext = it.text.slice(0, 24);
+  } else if (it.kind === 1) {
+    st.gboy = [0, 1, 7, 3, 2, 1, 0];
+    for (const [k, at, count] of GBOY_KEYS) st.gboy[at] = num(kv[k], 0, count - 1, st.gboy[at]);
+  } else if (it.kind === 2) {
+    st.riso = [0, 0, 0, 2, 2, 3, 0, 0, 0];
+    for (const [k, at, count] of RISO_KEYS) st.riso[at] = num(kv[k], 0, count - 1, st.riso[at]);
+    if (names && st.riso[8] >= (names.variants[st.riso[7]] || []).length) st.riso[8] = 0;
+  } else {
+    st.grade = GRADE_NEUTRAL.slice();
+    st.gradeSlot = num(kv.grade, 1, 4, 1) - 1;
+    st.sharp = named(kv.sharpening, SHARP_NAMES);
+    if (names) for (let f = 0; f < 40; f++) { const v = kv[gradeKey(f)]; const [lo, hi] = names.gradeRange[f]; st.grade[f] = num(v, lo, hi, st.grade[f]); }
+  }
+  return st;
+}
+// The part after the name, as film_lut.c presets_format writes it, with
+// preset_tidy's rules (no stamp text unless it is shown, and so on).
+function lookRest(st) {
+  if (st.engine === 1) return 'ZrnoBoy|' + GBOY_KEYS.map(([k, at]) => `${k}=${st.gboy[at]}`).join(' ');
+  if (st.engine === 2) return 'Print|' + RISO_KEYS.map(([k, at]) => `${k}=${st.riso[at]}`).join(' ');
+  if (st.engine === 3) {
+    let out = `Grade|grade=${st.gradeSlot + 1} sharpening=${SHARP_NAMES[st.sharp]}`;
+    for (let f = 0; f < 40; f++) if (st.grade[f] !== GRADE_NEUTRAL[f]) out += ` ${gradeKey(f)}=${st.grade[f] > 0 && names.gradeRange[f][0] < 0 ? '+' : ''}${st.grade[f]}`;
+    return out;
+  }
+  const stamp = st.stamp, smode = stamp ? st.smode : 0, hcol = st.halation ? st.hcol : 0;
+  const vals = [LEVELS[st.halation], LEVELS[st.bloom], LEVELS[st.soft], SHARP_NAMES[st.sharp], LEVELS[st.grain], LEVELS[st.vignette],
+    LEVELS[st.leaks], LEVELS[st.toy], LEVELS[st.dust], STAMP_TOKENS[stamp], SMODE_TOKENS[smode], HCOL_NAMES[hcol]];
+  const text = stamp && smode === 2 ? printable(st.stext) : '';
+  return `${st.look}|` + FILM_KEYS.map((k, i) => `${k}=${vals[i]}`).join(' ') + `|${text}`;
+}
+function currentState() {
+  return { engine: s.engine, look: s.look, halation: s.halation, bloom: s.bloom, soft: s.soft, grain: s.grain, vignette: s.vignette,
+    leaks: s.leaks, toy: s.toy, dust: s.dust, sharp: s.sharp, stamp: s.stamp, smode: s.smode, stext: s.stext, hcol: s.hcol,
+    gboy: s.gboy, riso: s.riso, grade: s.grade, gradeSlot: s.gradeSlot };
+}
+const itemRest = (it) => lookRest({ ...currentState(), ...lookState(it) });
+function applyLook(it) {
+  const st = lookState(it);
+  for (const k of ['gboy', 'riso', 'grade']) if (st[k]) st[k] = st[k].slice();
+  Object.assign(s, st);
+  requestRender();
+}
+function lookSummary(it) {
+  if (it.kind === 1) return `ZrnoBoy · ${names ? names.palettes[lookState(it).gboy[0]] : ''}`;
+  if (it.kind === 2) { const st = lookState(it); return `Print · ${names ? names.styles[st.riso[7]] : ''}`; }
+  if (it.kind === 3) return `Grade ${lookState(it).gradeSlot + 1}`;
+  const st = lookState(it);
+  const codes = EFFECTS.filter(([key]) => st[key]).map(([key, , code]) => code + st[key]);
+  return (st.look ? label(st.look) : `${it.file} (not in this page)`) + (codes.length ? ' · ' + codes.join(' ') : '') + (st.stamp ? ' S' : '');
+}
+
+// Where looks are read and written: the camera over USB, or an opened card.
+function looksOverUsb(cam) {
+  return {
+    live: true,
+    read: async () => {
+      const r = await cam.lua(`local f=io.open('${LOOKS_PATH}','rb') if not f then return '' end local s=f:read('*a') f:close() return s or ''`, { bytes: true });
+      return r instanceof Uint8Array ? new TextDecoder('latin1').decode(r) : '';
+    },
+    write: async (text) => {
+      await cam.upload(LOOKS_PATH, new TextEncoder().encode(text));
+      await cam.upload(LOOKS_RELOAD, new TextEncoder().encode('Read LOOKS.TXT again (written by the browser tool)\n'));
+    },
+    picked: async () => (await cam.lua(`return os.stat('${LOOKS_RELOAD}')==nil`)) === true,
+  };
+}
+function looksOnCard(filmDir, root) {
+  return {
+    live: false,
+    read: async () => { try { return await (await (await filmDir.getFileHandle('LOOKS.TXT')).getFile()).text(); } catch (err) { if (err.name === 'NotFoundError') return ''; throw err; } },
+    write: async (text) => {
+      if ((await root.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('the browser was not allowed to change the card');
+      const out = await (await filmDir.getFileHandle('LOOKS.TXT', { create: true })).createWritable();
+      await out.write(text); await out.close();
+    },
+  };
+}
+async function loadLooks(io) {
+  looks.io = io; looks.items = []; looks.note = '';
+  if (io) {
+    try { Object.assign(looks, parseLooks(await io.read())); }
+    catch (err) { looks.note = 'Could not read the looks: ' + (err.message || err); }
+  }
+  syncLooks();
+}
+let looksBusy = false;
+/* Reads LOOKS.TXT again, changes it with `edit(parsed)` and writes it back. */
+async function changeLooks(edit, done) {
+  if (!looks.io || looksBusy) return;
+  looksBusy = true; looks.note = 'Saving…'; syncLooks();
+  try {
+    const now = parseLooks(await looks.io.read());
+    const problem = edit(now);
+    if (problem) throw new Error(problem);
+    const head = now.comments.length ? now.comments : ['# Zrno looks, one per line: Name|LUT file|settings|stamp text, or Name|ZrnoBoy|..., Name|Print|..., Name|Grade|...'];
+    const text = [...head, ...now.items.map((it) => it.line)].join('\n') + '\n';
+    if (text.length > 16384) throw new Error('the looks file would be over 16 KB');
+    await looks.io.write(text);
+    Object.assign(looks, parseLooks(text));
+    looks.note = done + (looks.io.live ? ' Saved to the camera.' : ' Saved to the card.');
+    if (looks.io.live && looks.io.picked) {
+      const io = looks.io;
+      setTimeout(async () => {
+        try {
+          if (io !== looks.io) return;
+          looks.note = (await io.picked()) ? done + ' The camera has it now.'
+            : done + ' Saved to the card. The camera reads it at its next start (or right away with this version of Zrno).';
+          syncLooks();
+        } catch { /* the camera went away */ }
+      }, 2500);
+    }
+  } catch (err) {
+    looks.note = 'Not saved: ' + (err.message || err);
+  }
+  looksBusy = false;
+  syncLooks();
+}
+const findItem = (list, it) => list.items.findIndex((x) => x.line === it.line) >= 0 ? list.items.findIndex((x) => x.line === it.line) : list.items.findIndex((x) => x.name === it.name);
+function addLook(name) {
+  const line = `${name}|${lookRest(currentState())}`;
+  changeLooks((now) => {
+    if (now.items.length >= LOOKS_MAX) return `the camera holds ${LOOKS_MAX} looks; delete one first`;
+    if (now.items.some((x) => lower(x.name) === lower(name))) return 'a look with this name exists';
+    now.items.push(parseLooks(line).items[0]);
+  }, `Saved "${name}".`);
+}
+function updateLook(it) {
+  changeLooks((now) => {
+    const i = findItem(now, it); if (i < 0) return 'the look is no longer on the camera';
+    now.items[i] = parseLooks(`${now.items[i].name}|${lookRest(currentState())}`).items[0];
+  }, `Updated "${it.name}".`);
+}
+function renameLook(it, name) {
+  changeLooks((now) => {
+    const i = findItem(now, it); if (i < 0) return 'the look is no longer on the camera';
+    const line = now.items[i].line;
+    now.items[i] = parseLooks(name + line.slice(line.indexOf('|'))).items[0];
+  }, `Renamed to "${name}".`);
+}
+async function deleteLook(it) {
+  if (!await confirmDialog(`Delete the look "${it.name}"?`, `It is removed from the camera's looks. Photos taken with it keep their look.`, [lookSummary(it)], 'Delete')) return;
+  changeLooks((now) => { const i = findItem(now, it); if (i < 0) return 'the look is no longer on the camera'; now.items.splice(i, 1); }, `Deleted "${it.name}".`);
+}
+let renaming = null;
+function syncLooks() {
+  if (!$('presets')) return;
+  const list = $('presets'), current = names ? lookRest(currentState()) : '';
+  list.replaceChildren();
+  for (const it of looks.items) {
+    const li = document.createElement('li');
+    li.className = 'preset' + (names && itemRest(it) === current ? ' active' : '');
+    if (renaming === it) {
+      const input = document.createElement('input');
+      input.type = 'text'; input.maxLength = NAME_MAX; input.value = it.name; input.setAttribute('aria-label', 'New name');
+      const fit = document.createElement('div'); fit.className = 'fit';
+      const wrap = document.createElement('div'); wrap.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:4px;padding:4px';
+      wrap.append(input, fit);
+      li.append(wrap);
+      showFit(fit, input.value, it);
+      input.addEventListener('input', () => showFit(fit, input.value, it));
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') { renaming = null; syncLooks(); }
+        if (e.key === 'Enter' && showFit(fit, input.value, it)) { renaming = null; renameLook(it, input.value.trim()); }
+      });
+      input.addEventListener('blur', () => setTimeout(() => { if (renaming === it) { renaming = null; syncLooks(); } }, 150));
+      list.appendChild(li);
+      setTimeout(() => { input.focus(); input.select(); });
+      continue;
+    }
+    const apply = document.createElement('button');
+    apply.className = 'apply'; apply.type = 'button';
+    apply.textContent = it.name;
+    const small = document.createElement('small'); small.textContent = lookSummary(it);
+    apply.appendChild(small);
+    apply.title = 'Apply to this photo';
+    apply.addEventListener('click', () => applyLook(it));
+    const act = (text, title, fn, cls = '') => {
+      const b = document.createElement('button');
+      b.className = 'act ' + cls; b.type = 'button'; b.textContent = text; b.title = title; b.setAttribute('aria-label', `${title}: ${it.name}`);
+      b.disabled = looksBusy; b.addEventListener('click', fn);
+      return b;
+    };
+    li.append(apply,
+      act('⤓', 'Update with the current settings', () => updateLook(it)),
+      act('✎', 'Rename', () => { renaming = it; syncLooks(); }),
+      act('×', 'Delete', () => deleteLook(it), 'del'));
+    list.appendChild(li);
+  }
+  $('looks-count').textContent = looks.io ? `${looks.items.length} / ${LOOKS_MAX}` : '';
+  $('looks-refresh').hidden = !looks.io;
+  $('preset-add').disabled = !looks.io || looksBusy || looks.items.length >= LOOKS_MAX;
+  $('looks-note').textContent = looks.note || (!looks.io ? 'Connect the camera to see its saved looks, apply them to photos and save new ones.'
+    : !looks.items.length ? 'No looks saved on the camera yet. Set a look and its effects, then save it here.' : 'Click a look to apply it to this photo.');
+}
+$('preset-add').addEventListener('click', () => {
+  $('preset-new').hidden = false;
+  let k = looks.items.length + 1;
+  while (looks.items.some((x) => x.name === `Look ${k}`)) k++;
+  $('preset-name').value = `Look ${k}`;
+  showFit($('preset-fit'), $('preset-name').value);
+  $('preset-name').focus(); $('preset-name').select();
+});
+$('preset-name').addEventListener('input', () => showFit($('preset-fit'), $('preset-name').value));
+$('preset-name').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('preset-save').click(); if (e.key === 'Escape') $('preset-cancel').click(); });
+$('preset-cancel').addEventListener('click', () => { $('preset-new').hidden = true; });
+$('preset-save').addEventListener('click', () => {
+  const name = $('preset-name').value.trim();
+  if (!showFit($('preset-fit'), name)) return;
+  $('preset-new').hidden = true;
+  addLook(name);
+});
+$('looks-refresh').addEventListener('click', () => loadLooks(looks.io));
+
+// The camera's look per shot ---------------------------------------------------
+// The camera logs every graded shot to CHDK/FILM/STAGELOG.TXT: "raw_id=12
+// patch_rc=0 lut=PORTRA.LUT halation=1 halo_level=2 grain_level=1
+// grain_seed=... bloom_level=1 vignette=1 leaks=0 toy=0 dust=1 stamp=1
+// soft=0 ...". raw_id is the backup's number (R0000012.RAW), and patch_rc=0
+// means the look was applied. The grain seed is the camera's own, so grain
+// and light leaks come out as they did on the camera. The stamp's mode and
+// text are not logged, so those stay as set here.
+function parseStageLog(text) {
+  const out = new Map();
+  for (const line of text.split('\n')) {
+    if (!line.startsWith('raw_id=')) continue;
+    const f = {};
+    for (const kv of line.trim().split(/\s+/)) { const i = kv.indexOf('='); if (i > 0) f[kv.slice(0, i)] = kv.slice(i + 1); }
+    const n = +f.raw_id;
+    if (n > 0 && f.patch_rc === '0') out.set(n, f);
+  }
+  return out;
+}
+function cameraLook(f) {
+  const level = (v) => Math.min(3, Math.max(0, (+v) | 0));
+  const out = {};
+  const lut = (f.lut || '').toUpperCase();
+  if (LOOKS.some((l) => l[0] === lut)) out.look = lut;
+  if ('halo_level' in f) out.halation = f.halation === '0' ? 0 : level(f.halo_level);
+  for (const [key, field] of [['bloom', 'bloom_level'], ['grain', 'grain_level'], ['soft', 'soft'], ['vignette', 'vignette'],
+    ['leaks', 'leaks'], ['toy', 'toy'], ['dust', 'dust']]) if (field in f) out[key] = level(f[field]);
+  if ('stamp' in f) out.stamp = Math.min(4, Math.max(0, (+f.stamp) | 0));
+  if ('grain_seed' in f) out.seed = (+f.grain_seed) >>> 0;
+  out.lutFile = lut;
+  out.gboy = f.gboy === '1';
+  return out;
+}
+function applyCameraLook(look) {
+  if (!look.gboy) s.engine = 0;
+  for (const key of ['look', 'halation', 'bloom', 'soft', 'grain', 'vignette', 'leaks', 'toy', 'dust', 'stamp', 'seed']) if (key in look) s[key] = look[key];
+  sync();
+}
+// "Portra 400 · H2 B1 G1 V1 D1 S", as on the camera's shooting screen.
+function describeLook(look) {
+  if (!look.look) return `${look.lutFile || 'a look'} (not one of this page's looks)`;
+  let text = label(look.look);
+  const codes = EFFECTS.filter(([key]) => look[key]).map(([key, , code]) => code + look[key]);
+  if (look.stamp) codes.push('S');
+  if (codes.length) text += ' · ' + codes.join(' ');
+  return look.gboy ? 'ZrnoBoy or Print (their settings are not logged)' : text;
+}
+$('camera-look').addEventListener('click', () => {
+  const shot = shots[current];
+  if (shot && shot.camera) { applyCameraLook(shot.camera); requestRender(); }
+});
+
+// White balance ----------------------------------------------------------------
+// The camera saves its white-balance record for each backup as
+// FGRAW/Rnnnnnnn.SET (3,512 bytes, film_raw.c wb_file). Its levels are
+// 32-bit little-endian G R B G at 0x78d, G near 1024 (checked on the camera's
+// own .SET files: a tungsten shot has B about 3.5 times G, as its raw data
+// needs); they are used when they look like white balance, and the G12's
+// daylight balance otherwise.
+// Temperature and Tint scale those levels: warmer raises red and lowers
+// blue, magenta lowers green.
+const DAYLIGHT = [1883, 1024, 1933];
+function parseWbRecord(bytes) {
+  if (bytes.byteLength !== 0xdb8) return null;
+  const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const g1 = v.getUint32(0x78d, true), r = v.getUint32(0x791, true), b = v.getUint32(0x795, true), g2 = v.getUint32(0x799, true);
+  const g = (g1 + g2) / 2;
+  if (!(g >= 256 && g <= 8192) || Math.abs(g1 - g2) > g * 0.05) return null;
+  if (!(r / g >= 0.3 && r / g <= 4 && b / g >= 0.3 && b / g <= 4)) return null;
+  return [r, Math.round(g), b];
+}
+function shotWb(shot) {
+  if (!shot.set) return Promise.resolve(null);
+  if (!shot.wbRead) shot.wbRead = shot.set.get().then((f) => f.arrayBuffer()).then((b) => parseWbRecord(new Uint8Array(b))).catch(() => null);
+  return shot.wbRead;
+}
+function wbLevels() {
+  const base = source.wbShot || DAYLIGHT, t = s.temp / 100, n = s.tint / 100;
+  return [Math.round(base[0] * 2 ** (0.6 * t)), Math.round(base[1] * 2 ** (-0.4 * n)), Math.round(base[2] * 2 ** (-0.6 * t))];
+}
+let wbTimer = 0;
+function requestWb() {
+  clearTimeout(wbTimer);
+  wbTimer = setTimeout(() => {
+    if (source.kind !== 'raw' || loadedSeq !== loadSeq) return;
+    worker.postMessage({ type: 'set-wb', levels: wbLevels(), seq: loadSeq });
+  }, 120);
+}
+function showWbBase() {
+  $('wb-base').textContent = source.kind !== 'raw' ? '—' : source.wbShot ? 'As shot' : 'Daylight';
+  $('wb-note').textContent = source.kind === 'raw' && !source.wbShot
+    ? (shots[current] && shots[current].set ? "This backup's .SET could not be read, so it starts from daylight." : 'This backup has no .SET (made before the camera saved white balance), so it starts from daylight.')
+    : 'Each backup keeps the camera\'s white balance in a .SET file beside it. Temperature warms or cools from there, Tint moves between green and magenta.';
+}
+
+// Deleting a shot ------------------------------------------------------------------
+// Removes the shot's backup, its white balance (.SET), the camera JPEG and a
+// Canon RAW of the same name from the card, after a confirmation. Renders
+// saved in ZRNO stay.
+const canDelete = (shot) => !!shot.raw.remove && (!!cardUsb || !!cardDir);
+function confirmDialog(title, text, items, yes) {
+  const d = $('confirm');
+  $('confirm-title').textContent = title;
+  $('confirm-text').textContent = text;
+  $('confirm-list').replaceChildren(...items.map((t) => { const li = document.createElement('li'); li.textContent = t; return li; }));
+  $('confirm-yes').textContent = yes;
+  return new Promise((resolve) => {
+    const done = (v) => { d.close(); resolve(v); };
+    $('confirm-yes').onclick = () => done(true);
+    $('confirm-no').onclick = () => done(false);
+    d.oncancel = () => resolve(false);
+    d.showModal();
+    $('confirm-no').focus();
+  });
+}
+$('delete').addEventListener('click', async () => {
+  const i = current, shot = shots[i];
+  if (!shot || !canDelete(shot) || saving) return;
+  const files = [shot.raw, shot.set, shot.jpeg, shot.cr2].filter((f) => f && f.remove);
+  const where = cardUsb ? "the camera's card" : 'the card';
+  if (!await confirmDialog(`Delete ${shot.label}?`, `These files are deleted from ${where}. This can't be undone.`, files.map((f) => f.path), 'Delete')) return;
+  saving = true; updateSave();
+  const gone = new Set();
+  try {
+    if (cardDir && !cardUsb && (await cardDir.requestPermission({ mode: 'readwrite' })) !== 'granted') throw new Error('the browser was not allowed to change the card');
+    for (const f of files) { await f.remove(); gone.add(f); }
+    setSaveNote(`Deleted ${shot.label}.`);
+  } catch (err) {
+    setSaveNote(`Not all deleted: ${err.message || err}`, true);
+  }
+  saving = false;
+  if (!gone.size) { updateSave(); return; }
+  const left = shotFiles.filter((f) => !gone.has(f));
+  if (!left.some((f) => RAW_RE.test(f.name))) {
+    shots = []; current = -1; $('strip').hidden = true; $('strip-list').innerHTML = ''; updateSave(); loadChart();
+    return;
+  }
+  const message = saveMessage;
+  await setShots(left, shotsTitle, cardDir, cardUsb, gone.has(shot.raw) ? Math.max(0, i - 1) : i);
+  saveMessage = message; updateSave();
+});
+
+// Loader -----------------------------------------------------------------------
+let loading = null;
+function showLoading(shot, text) {
+  loading = { path: shot.raw.path, seq: loadSeq, t0: performance.now() };
+  const img = $('loading-thumb');
+  img.removeAttribute('src');
+  shotThumb(shot).then((url) => { if (url && loading && loading.path === shot.raw.path) img.src = url; });
+  $('loading-fill').style.width = '0';
+  $('loading-text').textContent = text;
+  sizeLoading();
+  $('loading').hidden = false;
+}
+function hideLoading() { loading = null; $('loading').hidden = true; }
+$('loading-thumb').addEventListener('error', (e) => e.target.removeAttribute('src'));
+function loadProgress(path, got, total) {
+  const pct = Math.round(100 * got / total);
+  setStatus(`Downloading ${path} over USB: ${pct}%`);
+  if (!loading || loading.path !== path) return;
+  const secs = (performance.now() - loading.t0) / 1000;
+  const speed = secs > 0.3 ? ` · ${(got / 1e6 / secs).toFixed(1)} MB/s` : '';
+  $('loading-text').textContent = `Downloading ${path.split('/').pop()} · ${pct}%${speed}`;
+  $('loading-fill').style.width = pct + '%';
+}
+
+// The last folder and the file name of a path, upper case: "100___01/IMG_0001.JPG".
+const tail = (path) => path.split('/').slice(-2).join('/').toUpperCase();
+const base = (path) => path.split('/').pop().toUpperCase();
+
+/* Lists the backups found in `files`; `dir` is the folder's handle when the
+   browser gave one. The old list stays when there are none. */
+let shotFiles = [], shotsTitle = '';
+async function setShots(files, title, dir = null, camera = null, openIndex = -1) {
+  files = files.filter((f) => !f.name.startsWith('.'));
+  const raws = files.filter((f) => RAW_RE.test(f.name));
+  if (!raws.length) {
+    setStatus(`No Zrno backups in ${title}: open the card, or a folder with FGRAW/R*.RAW.`, true);
+    return;
+  }
+  if (saving) stopSaving = true;
+  shotFiles = files; shotsTitle = title;
+  cardDir = dir;
+  cardUsb = camera;
+  saveMessage = null;
+  // Backup → camera JPEG, from every NATIVE.TXT found (a later line wins).
+  const pairs = new Map();
+  for (const f of files.filter((x) => NATIVE_RE.test(x.name))) {
+    try {
+      const text = await (await f.get()).text();
+      for (const m of text.matchAll(/stage=jpeg_saved rc=0 raw=(\S+) jpg=(\S+)/g)) pairs.set(base(m[1]), m[2]);
+    } catch { /* an unreadable log only costs the pairing */ }
+  }
+  // Backup number → the look and effects the camera graded it with, from
+  // every STAGELOG.TXT found (a later line wins, as a re-develop logs after).
+  const graded = new Map();
+  for (const f of files.filter((x) => STAGELOG_RE.test(x.name))) {
+    try { for (const [n, fields] of parseStageLog(await (await f.get()).text())) graded.set(n, fields); }
+    catch { /* without the log, shots open with the current settings */ }
+  }
+  const byTail = new Map(), byName = new Map();
+  for (const f of files.filter((x) => JPEG_RE.test(x.name))) { byTail.set(tail(f.path), f); byName.set(base(f.path), f); }
+  thumbUrls.forEach((u) => URL.revokeObjectURL(u));
+  thumbUrls = [];
+  thumbObserver.disconnect();
+  shots = raws.map((raw) => {
+    const jpg = pairs.get(base(raw.path));
+    // By folder and name; by name alone when the files were picked one by one.
+    const jpeg = jpg ? byTail.get(tail(jpg)) || (!raw.path.includes('/') && byName.get(base(jpg))) || null : null;
+    const number = +((/^R(\d+)\.RAW$/i.exec(raw.name) || [])[1] || 0);
+    const sibling = (from, re) => from && files.find((f) => re.test(f.name) && f.path.toUpperCase() === from.path.toUpperCase().replace(/\.[^.]+$/, '') + f.name.slice(f.name.lastIndexOf('.')).toUpperCase());
+    return { raw, jpeg, set: sibling(raw, SET_RE) || null, cr2: sibling(jpeg, CR2_RE) || null, jpegPath: jpg || '', stem: raw.name.replace(/\.[^.]+$/, ''), label: (jpg ? base(jpg) : raw.name).replace(/\.[^.]+$/, ''),
+      camera: graded.has(number) ? cameraLook(graded.get(number)) : null };
+  }).sort((a, b) => a.raw.path.localeCompare(b.raw.path, undefined, { numeric: true }));
+  const list = $('strip-list');
+  list.innerHTML = '';
+  shots.forEach((shot, i) => {
+    const li = document.createElement('li');
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'shot';
+    b.title = shot.raw.path + (shot.jpegPath ? ' → ' + shot.jpegPath : ' (no camera JPEG found)');
+    const img = document.createElement('img');
+    img.alt = ''; img.dataset.i = String(i);
+    const name = document.createElement('span');
+    name.className = 'name';
+    name.innerHTML = '<span></span><span class="kinds"></span>';
+    name.firstChild.textContent = shot.label.length > 9 ? shot.label.slice(0, 8) + '…' : shot.label;
+    name.lastChild.textContent = '#' + (Number(shot.stem.replace(/\D/g, '')) || shot.stem);
+    b.append(img, name);
+    b.addEventListener('click', () => { if (!batch) openShot(i); });
+    li.appendChild(b);
+    list.appendChild(li);
+    if (shot.jpeg) thumbObserver.observe(img);
+  });
+  $('strip').hidden = shots.length < 2;
+  $('strip').dataset.title = title;
+  sizeCanvas();
+  // The newest tiles' thumbnails first: over USB they would otherwise wait
+  // behind the backup that opens next.
+  shots.slice(-12).forEach((shot) => shotThumb(shot));
+  openShot(openIndex >= 0 ? Math.min(openIndex, shots.length - 1) : shots.length - 1); // the newest backup by default
+  updateSave();
+}
+/* Opens shot i with the look the camera gave it, when STAGELOG has it;
+   keepLook keeps the settings as they are (Save all shots). */
+async function openShot(i, keepLook = false) {
+  if (i < 0 || i >= shots.length) return;
+  current = i;
+  markShots();
+  frameFailed(new Error('another shot was opened'));
+  const shot = shots[i];
+  const seq = ++loadSeq;
+  if (shot.camera && !keepLook) applyCameraLook(shot.camera);
+  if (!keepLook) { s.temp = s.tint = 0; sync(); }
+  $('camera-look').hidden = !shot.camera;
+  setStatus('Developing ' + shot.raw.path + '…');
+  source = { kind: 'raw', name: shot.raw.path, jpeg: shot.jpegPath, jpegFound: !!shot.jpeg, date: null, wb: null, ms: 0, camera: shot.camera };
+  // The thumbnail is asked for first: over USB it then comes before the backup.
+  shotThumb(shot);
+  const wbRead = shotWb(shot);
+  showLoading(shot, cardUsb ? `Downloading ${shot.raw.name}…` : `Reading ${shot.raw.name}…`);
+  try {
+    const file = await shot.raw.get();
+    if (seq === loadSeq && loading) { $('loading-text').textContent = `Developing ${shot.raw.name}…`; $('loading-fill').style.width = '100%'; }
+    const [buf, date] = await Promise.all([file.arrayBuffer(), shotDate(shot, file)]);
+    source.wbShot = await wbRead;
+    if (seq !== loadSeq) return;
+    source.date = date;
+    worker.postMessage({ type: 'load-raw', buffer: buf, levels: wbLevels(), seq }, [buf]);
+  } catch (err) {
+    if (seq !== loadSeq) return;
+    hideLoading();
+    setStatus('Could not read ' + shot.raw.path + ': ' + (err.message || err), true);
+    frameFailed(err);
+  }
+}
+function markShots() {
+  const buttons = $('strip-list').querySelectorAll('.shot');
+  buttons.forEach((b, k) => b.setAttribute('aria-current', String(k === current)));
+  if (buttons[current]) buttons[current].scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  $('strip-title').textContent = `${$('strip').dataset.title} · ` +
+    (current >= 0 ? `shot ${current + 1} of ${shots.length}` : `${shots.length} shots`);
+}
+function step(d) { if (shots.length && !batch) openShot(Math.min(Math.max((current < 0 ? shots.length : current) + d, 0), shots.length - 1)); }
+window.addEventListener('keydown', (e) => {
+  if (!shots.length || e.altKey || e.metaKey || e.ctrlKey) return;
+  if (e.target.matches && e.target.matches('input, select, textarea')) return;
+  if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); step(e.key === 'ArrowRight' ? 1 : -1); }
+});
+
+// Capture date "YYYY:MM:DD HH:MM:SS": the camera JPEG's DateTimeOriginal, or
+// else the time the camera wrote the backup.
+async function shotDate(shot, rawFile) {
+  if (shot.jpeg) {
+    try {
+      const info = await exifInfo(await shot.jpeg.get());
+      source.exposure = info.exposure;
+      if (info.date) return info.date;
+    } catch { /* fall through */ }
+  }
+  const t = new Date(rawFile.lastModified), p = (v) => String(v).padStart(2, '0');
+  return `${t.getFullYear()}:${p(t.getMonth() + 1)}:${p(t.getDate())} ${p(t.getHours())}:${p(t.getMinutes())}:${p(t.getSeconds())}`;
+}
+// The camera JPEG's own thumbnail (the 160 x 120 JPEG in IFD1), read once
+// per shot for its tile and the loader.
+function shotThumb(shot) {
+  if (!shot.jpeg) return Promise.resolve(null);
+  if (!shot.thumb) {
+    shot.thumb = (async () => {
+      const file = await shot.jpeg.get();
+      const url = URL.createObjectURL((await exifInfo(file)).thumb || file);
+      thumbUrls.push(url);
+      return url;
+    })().catch(() => null);
+  }
+  return shot.thumb;
+}
+const imageLoads = (url) => new Promise((resolve) => { const i = new Image(); i.onload = () => resolve(true); i.onerror = () => resolve(false); i.src = url; });
+// A tile whose camera thumbnail can't be read gets a small copy of the
+// render, once the shot has been opened.
+async function ensureThumb(shot) {
+  if (shot.localThumb) return;
+  const url = await shotThumb(shot);
+  if (url && await imageLoads(url)) return;
+  const w = 160, h = Math.round(160 * canvas.height / canvas.width);
+  const small = new OffscreenCanvas(w, h);
+  small.getContext('2d').drawImage(canvas, 0, 0, w, h);
+  const local = URL.createObjectURL(await small.convertToBlob({ type: 'image/jpeg', quality: 0.8 }));
+  thumbUrls.push(local);
+  shot.localThumb = local;
+  shot.thumb = Promise.resolve(local);
+  const i = shots.indexOf(shot), tile = $('strip-list').querySelectorAll('.shot img')[i];
+  if (tile) tile.src = local;
+}
+async function loadThumb(shot, img) {
+  const url = await shotThumb(shot);
+  if (!url) return;
+  // A failed image keeps Chrome's broken-image icon: a fresh element shows the skeleton again.
+  img.addEventListener('error', () => { const fresh = img.cloneNode(); fresh.removeAttribute('src'); img.replaceWith(fresh); }, { once: true });
+  img.src = url;
+}
+// A JPEG's Exif APP1 segment in `v` (its first bytes): where the segment
+// starts and ends, where its TIFF header is, and the byte order.
+function findExif(v) {
+  if (v.byteLength < 16 || v.getUint16(0) !== 0xffd8) return null;
+  for (let i = 2; i + 10 <= v.byteLength && v.getUint8(i) === 0xff;) {
+    const marker = v.getUint8(i + 1), len = v.getUint16(i + 2);
+    if (marker === 0xe1 && v.getUint32(i + 4) === 0x45786966) {
+      const base = i + 10, order = v.getUint16(base);
+      if (order !== 0x4949 && order !== 0x4d4d) return null;
+      return { start: i, end: i + 2 + len, base, le: order === 0x4949 };
+    }
+    if (marker === 0xda) break;
+    i += 2 + len;
+  }
+  return null;
+}
+/* The camera JPEG's Exif segment for a saved render: IFD1 (the camera's
+   thumbnail) unlinked and the Exif pixel size set to the saved frame. */
+async function exifSegment(file, width, height) {
+  const v = new DataView(await file.slice(0, 65536).arrayBuffer());
+  const x = findExif(v);
+  if (!x || x.end > v.byteLength) return null;
+  const seg = new Uint8Array(v.buffer.slice(x.start, x.end));
+  const d = new DataView(seg.buffer), base = x.base - x.start, le = x.le;
+  const ifdAt = (o) => (o && base + o + 2 <= seg.length && base + o + 6 + d.getUint16(base + o, le) * 12 <= seg.length ? base + o : -1);
+  const ifd0 = ifdAt(d.getUint32(base + 4, le));
+  if (ifd0 < 0) return null;
+  const n0 = d.getUint16(ifd0, le);
+  d.setUint32(ifd0 + 2 + n0 * 12, 0, le);
+  for (let k = 0; k < n0; k++) {
+    const e = ifd0 + 2 + k * 12;
+    if (d.getUint16(e, le) !== 0x8769) continue;
+    const exif = ifdAt(d.getUint32(e + 8, le));
+    if (exif < 0) break;
+    for (let j = 0, n = d.getUint16(exif, le); j < n; j++) {
+      const f = exif + 2 + j * 12, tag = d.getUint16(f, le), type = d.getUint16(f + 2, le);
+      const value = tag === 0xa002 ? width : tag === 0xa003 ? height : -1;
+      if (value < 0) continue;
+      if (type === 3) d.setUint16(f + 8, value, le);
+      else if (type === 4) d.setUint32(f + 8, value, le);
+    }
+  }
+  return seg;
+}
+// Reads a camera JPEG's Exif block from its first 64 KB: the thumbnail
+// (IFD1 JPEGInterchangeFormat) and DateTimeOriginal (Exif IFD 0x9003).
+async function exifInfo(file) {
+  const out = { thumb: null, date: '', exposure: null };
+  const v = new DataView(await file.slice(0, 65536).arrayBuffer());
+  const x = findExif(v);
+  if (!x) return out;
+  const { base, le } = x;
+  const u16 = (o) => v.getUint16(base + o, le), u32 = (o) => v.getUint32(base + o, le);
+  const fits = (o, n) => base + o + n <= v.byteLength;
+  function entries(ifd) {
+    if (!fits(ifd, 2)) return null;
+    const count = u16(ifd);
+    if (!fits(ifd, 6 + count * 12)) return null;
+    const tags = new Map();
+    for (let k = 0; k < count; k++) { const e = ifd + 2 + k * 12; tags.set(u16(e), { count: u32(e + 4), value: u32(e + 8) }); }
+    return { tags, next: u32(ifd + 2 + count * 12) };
+  }
+  const ifd0 = entries(u32(4));
+  if (!ifd0) return out;
+  const exif = ifd0.tags.get(0x8769) && entries(ifd0.tags.get(0x8769).value);
+  const dt = exif && exif.tags.get(0x9003);
+  if (dt && dt.count >= 19 && fits(dt.value, 19)) {
+    out.date = String.fromCharCode(...new Uint8Array(v.buffer, base + dt.value, 19));
+    if (!/^\d{4}:\d\d:\d\d \d\d:\d\d:\d\d$/.test(out.date)) out.date = '';
+  }
+  // Exposure for ZrnoBoy's Viewfinder frame, in APEX96 as the camera keeps it.
+  if (exif) {
+    const rational = (tag, signed) => {
+      const t = exif.tags.get(tag);
+      if (!t || !fits(t.value, 8)) return null;
+      const n = signed ? v.getInt32(base + t.value, le) : u32(t.value), d = signed ? v.getInt32(base + t.value + 4, le) : u32(t.value + 4);
+      return d ? n / d : null;
+    };
+    const t = rational(0x829a), f = rational(0x829d), bias = rational(0x9204, true), iso = exif.tags.get(0x8827);
+    if (t && f) out.exposure = {
+      tv96: Math.round(96 * Math.log2(1 / t)), av96: Math.round(192 * Math.log2(f)),
+      iso: iso ? (le ? iso.value & 0xffff : iso.value >>> 16) : 0, ev96: Math.round(96 * (bias || 0)),
+    };
+  }
+  const ifd1 = ifd0.next && entries(ifd0.next);
+  const off = ifd1 && ifd1.tags.get(0x201), len = ifd1 && ifd1.tags.get(0x202);
+  if (off && len && base + off.value + len.value <= file.size) out.thumb = file.slice(base + off.value, base + off.value + len.value, 'image/jpeg');
+  return out;
+}
+
+// Saving -------------------------------------------------------------------
+// Saves the render as a full-size JPEG in ZRNO/ on the opened card (never
+// in DCIM or FGRAW), named after the camera JPEG and the look, e.g.
+// IMG_0001_PORTRA.JPG; saving the same shot with the same look replaces it.
+// The camera JPEG's Exif block (date, exposure, camera) is copied in, with
+// its thumbnail dropped. Without a folder handle (Safari, Firefox, files
+// picked one by one) the JPEG is downloaded instead.
+let saving = false, batch = false, stopSaving = false, frameWaiter = null, saveMessage = null;
+$('save').addEventListener('click', saveCurrent);
+$('save-all').addEventListener('click', saveAll);
+
+function frameFailed(err) { if (frameWaiter) { frameWaiter.reject(err); frameWaiter = null; } }
+/* Resolves once load `seq` is rendered with the current settings and on the canvas. */
+function frameShown(seq = loadSeq) {
+  if (loadedSeq === seq && shownSeq === seq && shownId === renderId && !renderTimer) return Promise.resolve();
+  frameFailed(new Error('another shot was opened'));
+  return new Promise((resolve, reject) => { frameWaiter = { seq, resolve, reject }; });
+}
+function saveName(shot) {
+  const look = s.look.replace(/\.LUT$/i, '');
+  return shot.label + (s.view === 2 ? '_DEVELOPED' : '_' + look + (s.view === 1 ? '_LOOK' : '')) + '.JPG';
+}
+/* Whether saves go to the card (Save to: Camera card); asks for write
+   access the first time. */
+const cardAvailable = () => !!(cardUsb || cardDir);
+async function writable() {
+  if (s.dest !== 1) return false;
+  if (cardUsb) {
+    if (cardUsb !== usbCam) throw new Error('the camera is not connected');
+    return true;
+  }
+  if (!cardDir) throw new Error('no card is open: connect the camera, or save to this computer');
+  const opts = { mode: 'readwrite' };
+  if ((await cardDir.queryPermission(opts)) === 'granted' || (await cardDir.requestPermission(opts)) === 'granted') return true;
+  throw new Error(`the browser was not allowed to write to ${cardDir.name}`);
+}
+async function encode(shot) {
+  const jpeg = await new Promise((resolve, reject) =>
+    canvas.toBlob((b) => (b ? resolve(b) : reject(new Error('JPEG encoding failed'))), 'image/jpeg', 0.92));
+  let exif = null;
+  try { if (shot.jpeg) exif = await exifSegment(await shot.jpeg.get(), canvas.width, canvas.height); } catch { /* saved without */ }
+  if (!exif) return jpeg;
+  // After the encoder's JFIF segment, if it wrote one.
+  const head = new Uint8Array(await jpeg.slice(0, 6).arrayBuffer());
+  const at = head[2] === 0xff && head[3] === 0xe0 ? 4 + ((head[4] << 8) | head[5]) : 2;
+  return new Blob([jpeg.slice(0, at), exif, jpeg.slice(at)], { type: 'image/jpeg' });
+}
+let usbFolderMade = null;
+async function store(name, blob, toCard) {
+  if (toCard && cardUsb) {
+    if (usbFolderMade !== cardUsb) { await cardUsb.lua("os.mkdir('A/ZRNO')"); usbFolderMade = cardUsb; }
+    const data = new Uint8Array(await blob.arrayBuffer());
+    await cardUsb.upload('A/ZRNO/' + name, data);
+    return `A/ZRNO/${name} on the camera`;
+  }
+  if (toCard) {
+    const dir = await cardDir.getDirectoryHandle('ZRNO', { create: true });
+    const out = await (await dir.getFileHandle(name, { create: true })).createWritable();
+    await out.write(blob);
+    await out.close();
+    return `${cardDir.name}/ZRNO/${name}`;
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+  return name + ' (downloaded)';
+}
+async function saveShot(i, toCard) {
+  await frameShown();
+  const where = await store(saveName(shots[i]), await encode(shots[i]), toCard);
+  const tile = $('strip-list').querySelectorAll('.shot')[i];
+  if (tile) tile.classList.add('saved');
+  return where;
+}
+async function saveCurrent() {
+  if (current < 0 || saving) return;
+  const i = current;
+  saving = true;
+  try {
+    const toCard = await writable();
+    setSaveNote('Saving…');
+    setSaveNote(`Saved ${await saveShot(i, toCard)}.`);
+  } catch (err) {
+    setSaveNote('Not saved: ' + (err.message || err), true);
+  }
+  saving = false;
+  updateSave();
+}
+async function saveAll() {
+  if (batch) { stopSaving = true; return; }
+  if (!shots.length || saving) return;
+  let toCard;
+  try { toCard = await writable(); } catch (err) { setSaveNote('Not saved: ' + (err.message || err), true); return; }
+  const list = shots;
+  let done = 0, failed = 0;
+  saving = batch = true;
+  stopSaving = false;
+  if (s.view !== 0) { s.view = 0; sync(); }
+  for (let i = 0; i < list.length && !stopSaving && shots === list; i++) {
+    setSaveNote(`Saving ${i + 1} of ${list.length}…`);
+    try { openShot(i, true); await saveShot(i, toCard); done++; } catch { failed++; }
+  }
+  saving = batch = false;
+  setSaveNote(`Saved ${done} of ${list.length} shots ` + (toCard && cardUsb ? 'to A/ZRNO on the camera' : toCard && cardDir ? `to ${cardDir.name}/ZRNO` : 'as downloads') +
+    (failed ? `; ${failed} failed` : '') + (stopSaving ? '; stopped.' : '.'), failed > 0);
+}
+function setSaveNote(text, bad) { saveMessage = { text, bad: !!bad }; updateSave(); }
+function updateSave() {
+  if (s.dest === 1 && !cardAvailable()) { s.dest = 0; markSegmented($('dest'), 0); }
+  $('dest').children[1].disabled = !cardAvailable();
+  $('save').disabled = current < 0 || saving;
+  $('save-all').disabled = !shots.length || (saving && !batch);
+  $('delete').disabled = current < 0 || saving || !shots[current] || !canDelete(shots[current]);
+  $('save').textContent = s.dest === 1 ? 'Save to card' : 'Download';
+  $('save-all').textContent = batch ? 'Stop' : shots.length > 1 ? `Save all ${shots.length} shots` : 'Save all shots';
+  const example = shots[current] ? saveName(shots[current]) : 'IMG_0001_PORTRA.JPG';
+  const note = saveMessage || { text: !shots.length ? 'Connect the camera to save its shots with the look and effects set here.'
+    : s.dest === 0 ? `Full-size JPEGs download to this computer, named like ${example}, with the camera JPEG's date and exposure.`
+    : cardUsb ? `Full-size JPEGs go to A/ZRNO on the camera's card over USB, named like ${example}, with the camera JPEG's date and exposure. Saving a shot again with the same look replaces its file.`
+    : cardDir ? `Full-size JPEGs go to ${cardDir.name}/ZRNO on the card, named like ${example}, with the camera JPEG's date and exposure. Saving a shot again with the same look replaces its file.`
+    : 'Connect the camera to save onto its card.' };
+  $('save-note').textContent = note.text;
+  $('save-note').className = note.bad ? 'note warn' : 'note';
+}
+updateSave();
+
+// A synthetic frame at the G12's size: colour patches, a bright lamp for
+// halation and bloom, hard black and white edges near the corners for the
+// toy lens's fringes, a grey wedge and fine type.
+function loadChart() {
+  const W = 3648, H = 2736, c = new OffscreenCanvas(W, H), g = c.getContext('2d');
+  let sky = g.createLinearGradient(0, 0, 0, H * 0.62);
+  sky.addColorStop(0, '#6f93b8'); sky.addColorStop(1, '#d7dde0');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H * 0.62);
+  let floor = g.createLinearGradient(0, H * 0.62, 0, H);
+  floor.addColorStop(0, '#8d725a'); floor.addColorStop(1, '#2f261f');
+  g.fillStyle = floor; g.fillRect(0, H * 0.62, W, H * 0.38);
+  const patches = ['#735244','#c29682','#627a9d','#576c43','#8580b1','#67bdaa','#d67e2c','#505ba6','#c15a63','#5e3c6c','#9dbc40','#e0a32e',
+                   '#383d96','#469449','#af363c','#e7c71f','#bb5695','#0885a1','#f3f3f2','#c8c8c8','#a0a0a0','#7a7a79','#555555','#343434'];
+  const pw = 210, gap = 26, x0 = 1060, y0 = 860;
+  g.fillStyle = '#181818'; g.fillRect(x0 - 40, y0 - 40, 6 * pw + 5 * gap + 80, 4 * pw + 3 * gap + 80);
+  patches.forEach((col, i) => { g.fillStyle = col; g.fillRect(x0 + (i % 6) * (pw + gap), y0 + Math.floor(i / 6) * (pw + gap), pw, pw); });
+  // Lamp with a soft glow.
+  const lamp = g.createRadialGradient(2900, 520, 0, 2900, 520, 420);
+  lamp.addColorStop(0, '#ffffff'); lamp.addColorStop(0.18, '#fffdf4'); lamp.addColorStop(0.35, 'rgba(255,240,210,0.55)'); lamp.addColorStop(1, 'rgba(255,240,210,0)');
+  g.fillStyle = lamp; g.beginPath(); g.arc(2900, 520, 420, 0, Math.PI * 2); g.fill();
+  // Hard edges: vertical bars on the right, steep diagonals at the left, rings top left.
+  g.fillStyle = '#111';
+  for (let i = 0; i < 6; i++) g.fillRect(3300 + i * 56, 1100, 28, 900);
+  g.save(); g.translate(260, 1700); g.rotate(-0.32);
+  for (let i = 0; i < 7; i++) { g.fillStyle = i % 2 ? '#f4f4f0' : '#111'; g.fillRect(i * 70, 0, 70, 1000); }
+  g.restore();
+  g.lineWidth = 14; g.strokeStyle = '#151515';
+  for (let r = 60; r < 360; r += 50) { g.beginPath(); g.arc(420, 420, r, 0, Math.PI * 2); g.stroke(); }
+  // Grey wedge.
+  for (let i = 0; i < 16; i++) { const v = Math.round(i * 255 / 15); g.fillStyle = `rgb(${v},${v},${v})`; g.fillRect(1060 + i * 95, 2060, 95, 160); }
+  g.fillStyle = '#20201f'; g.font = '600 120px "IBM Plex Sans", sans-serif'; g.fillText('ZRNO', 1060, 760);
+  g.font = '400 34px "IBM Plex Mono", monospace'; g.fillStyle = '#2a2a2a';
+  g.fillText('Test chart: open the card to grade your own shots. 3648 x 2736, like the camera frame.', 1060, 2300);
+  const data = g.getImageData(0, 0, W, H).data;
+  source = { kind: 'chart', name: 'Test chart', date: null, wb: null, ms: 0 };
+  setStatus('Loading test chart…');
+  current = -1;
+  if (shots.length) markShots();
+  frameFailed(new Error('the test chart was opened'));
+  updateSave();
+  worker.postMessage({ type: 'load-rgba', buffer: data.buffer, width: W, height: H, kind: 'chart', seq: ++loadSeq }, [data.buffer]);
+}
+
+function showFacts(m) {
+  const rows = [['Source', source.name], ['Frame', `${m.width} × ${m.height}`]];
+  if (m.kind === 'raw') {
+    const g = (m.wb[1] + m.wb[2]) / 2 || 1;
+    const wb = (source.wbShot ? 'As shot' : 'Daylight') + (s.temp || s.tint ? ', adjusted' : '') +
+      (m.wb.every((v) => v) ? `: R × ${(m.wb[0] / g).toFixed(2)}, B × ${(m.wb[3] / g).toFixed(2)}` : '');
+    rows.push(['Camera JPEG', source.jpegFound ? source.jpeg : source.jpeg ? source.jpeg + ' (not opened with the backup)' : 'not in NATIVE.TXT'],
+      ['Captured', source.date ? source.date.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3') : 'not recorded'],
+      ['Shot with', source.camera ? describeLook(source.camera) : 'not in STAGELOG.TXT'],
+      ['White balance', wb], ['Developed', Math.round(m.ms) + ' ms']);
+  }
+  $('facts').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${String(v).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</dd>`).join('');
+  const clock = $('clock-note');
+  clock.hidden = !(m.kind === 'raw' && /^19(7|8)/.test(source.date || ''));
+  clock.className = 'note warn';
+  clock.textContent = "This shot's date is 1980: the camera's clock isn't set, so the date stamp prints '80 on the camera.";
+  $('badge').textContent = m.kind === 'chart' ? 'Built-in test chart. Connect the camera to use your own shots. Click to zoom.' : 'Click to zoom to 100%';
+}
+
+worker.onmessage = (e) => {
+  const m = e.data;
+  if (m.type === 'ready') { names = m.names; buildEngines(); ready = true; sync(); loadChart(); }
+  else if (m.type === 'fatal') setStatus('Could not start the engine: ' + m.message, true);
+  else if (m.type === 'error') { hideLoading(); setStatus(m.message, true); frameFailed(new Error(m.message)); }
+  else if (m.type === 'loaded') {
+    if (m.seq !== loadSeq) return; // another file was opened since
+    if (m.rc !== 0) {
+      const why = m.rc === -1 ? `${source.name} isn't a Zrno backup (those are 15,634,944 bytes).` : 'Could not load (' + m.rc + ').';
+      hideLoading();
+      setStatus(why, true);
+      frameFailed(new Error(why));
+      return;
+    }
+    loadedSeq = m.seq;
+    source.wb = m.wb; source.ms = m.ms;
+    showWbBase();
+    showFacts(m);
+    requestRender();
+  } else if (m.type === 'rendered') {
+    if (m.id < shownId) return;
+    shownId = m.id;
+    if (canvas.width !== m.width || canvas.height !== m.height) { canvas.width = m.width; canvas.height = m.height; sizeCanvas(); }
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(m.pixels), m.width, m.height), 0, 0);
+    const views = ['with effects', 'look only', 'developed'];
+    const what = s.engine && s.view !== 2 ? `${ENGINES[s.engine]}` : `${label(s.look)}, ${views[s.view]}`;
+    setStatus(`${what}: rendered ${m.width}×${m.height} in ${Math.round(m.ms)} ms`);
+    shownSeq = m.seq;
+    if (loading && m.seq === loadSeq) hideLoading();
+    if (source.kind === 'raw' && m.seq === loadSeq && shots[current]) ensureThumb(shots[current]);
+    if (frameWaiter && frameWaiter.seq === m.seq && m.id === renderId && !renderTimer) { frameWaiter.resolve(); frameWaiter = null; }
+  }
+};
+sync();
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+name: Release
+
+# On a version tag (v0.8.3, matching card-manifest.json): fetch the pinned
+# CHDK tree and compiler, build the firmware, run the tests, package the
+# release and attach it to a draft GitHub release, to check and publish by
+# hand. Run by hand (workflow_dispatch), it does the same and keeps the
+# files as a workflow artifact instead.
+#
+# Two jobs: everything but the installer test runs on Linux, where runners
+# are plentiful; the installer test needs macOS (hdiutil and diskutil), so a
+# short second job runs it on the packaged zip and drafts the release.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    env:
+      XPACK: xpack-arm-none-eabi-gcc-10.3.1-2.3
+      # From the xPack release's own .sha file for the linux-x64 archive.
+      XPACK_SHA256: 559dcf1c2dfddac513110fe23da0ef254032c09967eaa901f075515d51818719
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt
+
+      - name: Check the tag matches the version
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          v=$(python -c "import json; print(json.load(open('card-manifest.json'))['version'])")
+          if [ "v$v" != "$GITHUB_REF_NAME" ]; then
+            echo "Tag $GITHUB_REF_NAME does not match version $v in card-manifest.json"; exit 1
+          fi
+
+      - uses: actions/cache@v6
+        with:
+          path: build/chdk-r6355
+          key: chdk-r6355-${{ hashFiles('tools/chdk-r6355.sha256') }}
+      - run: test -d build/chdk-r6355 || python tools/fetch_chdk.py
+
+      - name: Fetch the compiler
+        run: |
+          curl -fsSL -o "$RUNNER_TEMP/$XPACK.tar.gz" \
+            "https://github.com/xpack-dev-tools/arm-none-eabi-gcc-xpack/releases/download/v10.3.1-2.3/$XPACK-linux-x64.tar.gz"
+          echo "$XPACK_SHA256  $RUNNER_TEMP/$XPACK.tar.gz" | sha256sum -c
+          tar -xzf "$RUNNER_TEMP/$XPACK.tar.gz" -C "$RUNNER_TEMP"
+          echo "CROSS=$RUNNER_TEMP/$XPACK/bin/arm-none-eabi-" >> "$GITHUB_ENV"
+
+      - name: Build
+        run: SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) python tools/build_firmware.py --cross "$CROSS"
+      - run: python tools/test_native.py
+      - run: python tools/package_release.py
+      - run: mkdir -p build/artifacts/g12-100g && mv build/release/*-g12-100g[.-]* build/release/SHA256SUMS-g12-100g build/artifacts/g12-100g/
+
+      # Builds for the G12's other firmware versions, each from CHDK's own
+      # port for it (tools/firmware_variants.py). They have never run on a
+      # camera: their files say "untested" and name the firmware. Each build
+      # is its own artifact (a zip to download); the untested ones never go
+      # in the draft release.
+      - name: Build the untested firmware variants
+        run: |
+          fws=$(python -c "import sys; sys.path.insert(0, 'tools'); import firmware_variants as v; print(' '.join(f for f in v.firmwares('build/chdk-r6355') if not v.tested(f)))")
+          # One upload step per build below: they must match CHDK's list.
+          [ "$fws" = "100c 100e 100f" ] || { echo "CHDK's G12 firmware list is now: $fws. Update the upload steps."; exit 1; }
+          for fw in $fws; do
+            SOURCE_DATE_EPOCH=$(git log -1 --format=%ct) python tools/build_firmware.py --cross "$CROSS" --fw "$fw"
+            python tools/package_release.py --fw "$fw"
+            mkdir -p "build/artifacts/g12-$fw-untested"
+            mv build/release/*-g12-"$fw"-untested* "build/artifacts/g12-$fw-untested/"
+          done
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zrno-g12-100g
+          path: build/artifacts/g12-100g/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zrno-g12-100c-untested
+          path: build/artifacts/g12-100c-untested/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zrno-g12-100e-untested
+          path: build/artifacts/g12-100e-untested/
+          if-no-files-found: error
+      - uses: actions/upload-artifact@v7
+        with:
+          name: zrno-g12-100f-untested
+          path: build/artifacts/g12-100f-untested/
+          if-no-files-found: error
+
+  installer:
+    # macOS on arm64: the installer test needs hdiutil and diskutil. It needs
+    # no compiler or Python, only the packaged zip.
+    needs: build
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: zrno-g12-100g
+          path: build/release/
+      - run: bash tests/test_installer.sh
+
+      - name: Draft release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v=${GITHUB_REF_NAME#v}
+          cat > "$RUNNER_TEMP/notes.md" <<NOTES
+          For the Canon PowerShot G12 on firmware 1.00G.
+
+          **Install on a Mac:** download \`zrno-$v-g12-100g.zip\`, unzip it, put the SD card in the Mac and double-click \`install.command\`. Then lock the card and put it in the camera. \`INSTALL.TXT\` in the zip has the details, and the steps by hand for Windows and Linux.
+
+          \`zrno-$v-g12-100g-chdk-source.zip\` is the source of the firmware: CHDK release-1_6 r6355 with Zrno integrated. \`SHA256SUMS-g12-100g\` has the hashes of both zips.
+          NOTES
+          # The tested 1.00G files only; the untested builds stay in their artifacts.
+          gh release create "$GITHUB_REF_NAME" --draft --title "Zrno $v" --notes-file "$RUNNER_TEMP/notes.md" \
+            "build/release/zrno-$v-g12-100g.zip" "build/release/zrno-$v-g12-100g-chdk-source.zip" build/release/SHA256SUMS-g12-100g
