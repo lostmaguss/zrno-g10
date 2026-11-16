@@ -36,10 +36,9 @@ grain.)
 > [!WARNING]
 > This is unofficial firmware. It is not made, supported or endorsed by
 > Canon. It changes how the camera develops and saves photos. It can crash
-> the camera, lose photos or, in the worst case, damage the camera. During
-> development, one experiment caused a lens error. Use it at your own risk.
-> There is no warranty (see [COPYING](COPYING)). Only use it on a camera and
-> firmware listed under [Supported cameras](#supported-cameras).
+> the camera, lose photos or, in the worst case, damage the camera. Use it at
+> your own risk. There is no warranty (see [COPYING](COPYING)). Only use it on
+> a camera and firmware listed under [Supported cameras](#supported-cameras).
 
 ## Supported cameras
 
