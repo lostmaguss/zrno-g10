@@ -6,6 +6,12 @@ camera's DIGIC image processor, with a live preview. Many effects are heavily
 optimized for maximum performance, using the DSP instructions of the ARMv5TE
 instruction set. Built on [CHDK](https://chdk.fandom.com/).
 
+**[Open the web editor](https://suzvuk.github.io/zrno/)** to edit your shots
+in the browser with the camera's own effects, manage its saved looks and
+download photos from the camera over USB. It works in Chrome and Edge, and
+nothing leaves your computer. See [web/README.md](web/README.md) for how to
+use it.
+
 <table>
   <tr>
     <td align="center"><img src="docs/img/examples/kodachrome.jpg" width="256" alt="A mural of a face on a house, in Kodachrome 64 with every film effect: halation, bloom, soft focus, grain, a vignette, a light leak, toy lens, dust and a date stamp"><br><sub>Kodachrome 64 + all film effects</sub></td>
