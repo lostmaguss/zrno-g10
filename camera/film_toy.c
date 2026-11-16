@@ -39,6 +39,7 @@
  * radial scaling is separable. Cells average every other row and pixel pair,
  * plenty for 32-64 px cells. */
 #include "film_compact.h"
+#include "film_width.h"
 #include "film_toy.h"
 #include <string.h>
 
@@ -62,7 +63,7 @@ static size_t toy_layout(unsigned width,size_t blocks,size_t gw) {
 }
 size_t film_toy_work_size(unsigned width) {
  size_t pairs=width/2,blocks=(pairs+TOY_BLOCK-1)/TOY_BLOCK,gw=(width+FILM_TOY_MIN_CELL-1)/FILM_TOY_MIN_CELL;
- if(!width||width>3744||width%2)return 0;
+ if(!width||width>FILM_MAX_WIDTH||width%2)return 0;
  return toy_layout(width,blocks,gw);
 }
 /* Frame scale (film_toy_scale), Q16: 65536 is L. */

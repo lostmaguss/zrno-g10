@@ -9,6 +9,7 @@
  * Ring rows preserve original highlights ahead of in-place image writes.
  * No allocation, I/O or floating point; workspace may be reused after halo. */
 #include "film_bloom.h"
+#include "film_width.h"
 #include <string.h>
 #define BLOOM_MAX_RADIUS 24u
 unsigned film_bloom_radius(unsigned level){static const unsigned v[4]={0,32,64,96};return level<4?v[level]:0;}
@@ -20,7 +21,7 @@ unsigned film_soft_radius(unsigned level){static const unsigned v[4]={0,32,64,96
 static const unsigned soft_lift[4]={0,72,120,168},soft_soften[4]={0,24,44,64};
 size_t film_bloom_work_size(unsigned width) {
  size_t grid=(width+3u)/4u,ring=grid*(2u*BLOOM_MAX_RADIUS+2u);
- if(!width||width>3744||width%2)return 0;
+ if(!width||width>FILM_MAX_WIDTH||width%2)return 0;
  return ((ring+3u)&~(size_t)3u)+grid*17u;
 }
 /* Per grid column: the triangular vertical sum and its two halves (each at

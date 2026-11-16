@@ -4,6 +4,7 @@
  * Luma only, after colour/LUT/halation and before Canon JPEG encoding.
  * All allocation belongs to SpyTask. No file I/O or allocation here. */
 #include "film_grain.h"
+#include "film_width.h"
 static unsigned next_random(unsigned *state) {
  unsigned x=*state;x^=x<<13;x^=x>>17;x^=x<<5;*state=x;return x;
 }
@@ -14,16 +15,32 @@ static void noise_row(signed char *p,unsigned count,unsigned *state) {
   p[i]=(signed char)(n/4);
  }
 }
-size_t film_grain_work_size(unsigned width){return !width||width>3744||width%2?0:(size_t)(width/2+1)*2;}
+size_t film_grain_work_size(unsigned width){return !width||width>FILM_MAX_WIDTH||width%2?0:(size_t)(width/2+1)*2;}
 unsigned film_grain_amplitude(unsigned level){static const unsigned values[4]={0,2,4,7};return level<4?values[level]:0;}
 /* Frame scale (film_grain_scale): the grain gain, Q16. 65536 is L. */
 static unsigned grain_gain=65536u;
-static unsigned char grained(unsigned char y,int noise,const unsigned short weights[256]) {
+static __attribute__((unused)) unsigned char grained(unsigned char y,int noise,const unsigned short weights[256]) {
  int scaled=noise*(int)weights[y];
  int delta=scaled>=0?(scaled+16320)/32640:-((-scaled+16320)/32640);
  int result=(int)y+delta;
  return result<0?0:result>255?255:(unsigned char)result;
 }
+#ifdef MAGUS_G10
+/* G10 (docs/PORT-G10.md): the G10's frame is 1.47x the G12's on the same
+ * CPU, so the per-pixel step is cheaper here: weights are kept in Q16 of
+ * the G12's divisor (w * 65536 / 32640, at most 3584), the division becomes
+ * a multiply and a shift, and a table clamps. The grain is the same noise
+ * at the same strength; only exact rounding ties can land one level apart
+ * (tests/test_grain_g10.c). */
+static unsigned char clamp_table[256+128];
+static void clamp_init(void){for(int i=0;i<256+128;i++)clamp_table[i]=(unsigned char)(i<64?0:i>=64+255?255:i-64);}
+static inline unsigned grained16(unsigned y,int noise,const unsigned short *w16) {
+ return clamp_table[64+(int)y+((noise*(int)w16[y]+32768)>>16)];
+}
+#define GRAINED(y,noise,w) grained16((y),(noise),(w))
+#else
+#define GRAINED(y,noise,w) grained((y),(noise),(w))
+#endif
 int film_grain_begin_rows(film_grain_rows *state,unsigned width,unsigned height,
  unsigned level,unsigned seed,void *work,size_t work_size) {
  size_t need=film_grain_work_size(width);
@@ -40,7 +57,13 @@ int film_grain_begin_rows(film_grain_rows *state,unsigned width,unsigned height,
  for(unsigned y=0;y<256;y++) {
   unsigned w=((4u*y*(255u-y)+127u)/255u)*amplitude;
   state->weights[y]=(unsigned short)(grain_gain==65536u?w:(w*grain_gain+32768u)>>16);
+#ifdef MAGUS_G10
+  state->weights[y]=(unsigned short)(((unsigned)state->weights[y]*65536u+16320u)/32640u);
+#endif
  }
+#ifdef MAGUS_G10
+ if(!clamp_table[64+255])clamp_init();
+#endif
  noise_row(state->upper,state->columns,&state->coarse);
  noise_row(state->lower,state->columns,&state->coarse);
  return 0;
@@ -52,13 +75,37 @@ void film_grain_finish_row(unsigned char *pixels,void *context) {
  unsigned fine=state->fine,odd=state->row&1;
  unsigned pairs=state->columns-1;
  int left=odd?(upper[0]+lower[0])/2:upper[0];
- for(unsigned i=0;i<pairs;i++,pixels+=4) {
+ const unsigned short *weights=state->weights;
+ if(!((size_t)pixels&3u)) {
+  /* Aligned rows (the camera's frames): one word per pixel pair, U Y0 V Y1,
+   * and the odd/even rows in loops of their own. Same bytes as below. */
+  unsigned *word=(unsigned *)pixels;
+  if(odd) {
+   for(unsigned i=0;i<pairs;i++) {
+    unsigned r=next_random(&fine),w=word[i];
+    int right=(upper[i+1]+lower[i+1])/2;
+    unsigned y0=GRAINED((unsigned char)(w>>8),left*4+(int)(r&255)-(int)((r>>8)&255),weights);
+    unsigned y1=GRAINED((unsigned char)(w>>24),((left+right)/2)*4+(int)((r>>16)&255)-(int)(r>>24),weights);
+    word[i]=(w&0x00ff00ffu)|y0<<8|y1<<24;
+    left=right;
+   }
+  } else {
+   for(unsigned i=0;i<pairs;i++) {
+    unsigned r=next_random(&fine),w=word[i];
+    int right=upper[i+1];
+    unsigned y0=GRAINED((unsigned char)(w>>8),left*4+(int)(r&255)-(int)((r>>8)&255),weights);
+    unsigned y1=GRAINED((unsigned char)(w>>24),((left+right)/2)*4+(int)((r>>16)&255)-(int)(r>>24),weights);
+    word[i]=(w&0x00ff00ffu)|y0<<8|y1<<24;
+    left=right;
+   }
+  }
+ } else for(unsigned i=0;i<pairs;i++,pixels+=4) {
   unsigned r=next_random(&fine);
   int right=upper[i+1];
   if(odd)right=(right+lower[i+1])/2;
   int small0=(int)(r&255)-(int)((r>>8)&255),small1=(int)((r>>16)&255)-(int)(r>>24);
-  pixels[1]=grained(pixels[1],left*4+small0,state->weights);
-  pixels[3]=grained(pixels[3],((left+right)/2)*4+small1,state->weights);
+  pixels[1]=GRAINED(pixels[1],left*4+small0,weights);
+  pixels[3]=GRAINED(pixels[3],((left+right)/2)*4+small1,weights);
   left=right;
  }
  state->fine=fine;

@@ -14,6 +14,7 @@
  * light is added to the picture like an imprint exposed onto film, so it
  * washes out over bright areas. */
 #include "film_print.h"
+#include "film_width.h"
 #include "film_font.h"
 #include <stdlib.h>
 
@@ -66,7 +67,7 @@ static int sb(unsigned char b){return b<128?b:(int)b-256;}
 static void make_dust(const film_print *p);
 int film_print_begin(film_print *p,unsigned width,unsigned height,const film_print_settings *s,unsigned seed,int mono) {
  unsigned i,len=0;
- if(!p||!width||!height||width%2||width>3744)return -1;
+ if(!p||!width||!height||width%2||width>FILM_MAX_WIDTH)return -1;
  for(i=0;i<sizeof(*p);i++)((unsigned char*)p)[i]=0;
  if(!s)return 0;
  if(s->dust>3||s->stamp>4)return -1;

@@ -4,6 +4,11 @@
 # Firmware built by tools/build_firmware.py (contains Canon-derived code)
 /card/DISKBOOT.BIN
 /card/CHDK/MODULES/
+# G10 port test builds (tools/integrate_g10.py)
+/card-g10/observe/
+/card-g10/square/
+/card-g10/grain/
+/card-g10/magus/
 # Your camera's ROM dump: Canon's firmware, never commit it
 /rom/
 # Installer backups

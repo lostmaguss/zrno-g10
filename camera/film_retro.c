@@ -3,6 +3,7 @@
  * Integer only; all tables live in caller-provided workspace. Operates on
  * graded signed UYVY422 (U,Y0,V,Y1) one pixel pair at a time. */
 #include "film_compact.h"
+#include "film_width.h"
 #include "film_retro.h"
 #include <string.h>
 
@@ -17,7 +18,7 @@ static const unsigned leak_strength[4]={0,90,150,210};
 
 size_t film_retro_work_size(unsigned width) {
  size_t pairs=width/2;
- if(!width||width>3744||width%2)return 0;
+ if(!width||width>FILM_MAX_WIDTH||width%2)return 0;
  return ((pairs+1u)&~(size_t)1u)+256u*2u+FILM_RETRO_MAX_LEAKS*pairs;
 }
 static unsigned next_random(unsigned *state) {

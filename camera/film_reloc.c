@@ -22,10 +22,26 @@
  * against a ROM dump, instruction by instruction. */
 #include "film_reloc.h"
 
+#ifdef MAGUS_G10
+/* G10 1.03B (docs/PORT-G10.md): the task 0xff8b1c8c-0xff8b1f10 and the step
+ * loop of its message 4 (0xff8b153c-0xff8b1648). Hooks:
+ *   0xff8b1cc0  film_develop_trace(msg), after each message arrives
+ *   0xff8b1edc  film_stage_observe(1), before the step loop (message 4)
+ *   0xff8b1ee0  film_stage_observe(2), after every message's work
+ *   0xff8b1620  film_stage_observe(3), before each step (0xffa012e0)
+ * No hook sits inside either table jump (0xff8b1d18, 0xff8b1560). */
+#define TASK_START  0xff8b1c8cu
+#define TASK_END    0xff8b1f14u
+#define STEPS_START 0xff8b153cu
+#define STEPS_END   0xff8b164cu
+#define TRACE_LOAD  0xe59d0058u                         /* ldr r0,[sp,#0x58]: msg at [sp,#0x18] */
+#else
 #define TASK_START  0xff8e6f3cu
 #define TASK_END    0xff8e73ccu
 #define STEPS_START 0xff8e5ec4u
 #define STEPS_END   0xff8e60d4u
+#define TRACE_LOAD  0xe59d005cu                         /* ldr r0,[sp,#0x5c] */
+#endif
 #define N_TASK  ((TASK_END - TASK_START) >> 2)
 #define N_STEPS ((STEPS_END - STEPS_START) >> 2)
 #define N_INS   (N_TASK + N_STEPS)
@@ -34,7 +50,11 @@
 #define MAX_VENEERS 64
 #define MAX_LITERALS 64
 
+#ifdef MAGUS_G10
+static const unsigned hook_addr[4] = { 0xff8b1cc0u, 0xff8b1edcu, 0xff8b1ee0u, 0xff8b1620u };
+#else
 static const unsigned hook_addr[4] = { 0xff8e6f6cu, 0xff8e7324u, 0xff8e7328u, 0xff8e6050u };
+#endif
 
 static int index_of(unsigned a)
 {
@@ -102,7 +122,7 @@ int film_reloc_build(film_rom_word rom, unsigned *out, unsigned out_addr,
             out[pos++] = 0xe24dd008u;                    /* sub sp,sp,#8 */
             out[pos++] = 0xe58d0000u;                    /* str r0,[sp] */
             /* trace: the received message, [sp,#0x1c] before the 64 bytes pushed */
-            out[pos++] = hk == 0 ? 0xe59d005cu           /* ldr r0,[sp,#0x5c] */
+            out[pos++] = hk == 0 ? TRACE_LOAD            /* ldr r0,[sp,#msg] */
                                  : 0xe3a00000u | (unsigned)hk;   /* mov r0,#phase */
             k = intern(literal, &nlit, MAX_LITERALS, hk == 0 ? trace_fn : observe_fn);
             if (k < 0) return FILM_RELOC_FULL;

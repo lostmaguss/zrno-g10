@@ -1,0 +1,16 @@
+GOLD17|Warm 200
+PORTRA|Portra 400
+VELVIA|Velvia 50
+KCHROME|Kodachrome 64
+HP5|Ilford HP5
+EKTAR|Ektar 100
+P800|Portra 800
+F400H|Fuji 400H
+PROVIA|Provia 100F
+ASTIA|Astia 100F
+SUPERIA|Superia 200
+POLA669|Polaroid 669
+TRIX|Tri-X 400
+ACROS|Acros 100
+BLEACH|Bleach Bypass
+TEALORG|Teal & Orange

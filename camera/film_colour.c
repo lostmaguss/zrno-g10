@@ -17,6 +17,7 @@
 #define CPU_LUT 1
 #endif
 #include "film_colour.h"
+#include "film_width.h"
 #include "film_retro.h"
 #include "film_toy.h"
 #include "film_print.h"
@@ -314,7 +315,7 @@ static int map_cached(unsigned char *image,size_t size,unsigned width,unsigned h
  unsigned vignette,unsigned leaks,unsigned seed,unsigned toy_level,void *toy_work,size_t toy_size,
  const film_print_settings *print,int graded_mono) {
  unsigned row,col,n;int mono=graded_mono!=0,effects,lens,printing;film_retro retro;film_toy toy;film_print prt;
- if(!image||width>3744||!width||!height||width%2||stride<width*2||
+ if(!image||width>FILM_MAX_WIDTH||!width||!height||width%2||stride<width*2||
     height>size/stride||x%2||w%2||!w||!h||x>width||w>width-x||y>height||h>height-y)return -1;
 #if CPU_LUT
  unsigned short axis[256];
@@ -454,7 +455,7 @@ static size_t halo_tail_bytes(unsigned width,unsigned level) {
  return tw*tw+2u*tw+tw+2u*HALO_STAGES*halo_tail_box(level)+tw+2u*(width/2u);
 }
 size_t film_halo_level_work_size(unsigned width,unsigned level) {
- if(!width||width>3744||width%2||!level||level>3)return 0;
+ if(!width||width>FILM_MAX_WIDTH||width%2||!level||level>3)return 0;
  return ((halo_core_bytes(width/2u,halo_box(level))+1u)&~(size_t)1u)+halo_tail_bytes(width,level);
 }
 size_t film_halo_work_size(unsigned width){return film_halo_level_work_size(width,3);}
@@ -474,6 +475,11 @@ typedef struct {
  unsigned slot[HALO_STAGES],nz_rows[HALO_STAGES];unsigned char ring_nz[HALO_STAGES][2u*HALO_MAX_BOX+1u];
  int current_zero,next_zero;
  int fast;                                        /* fast halation: the mask from row 0 of each 2x2 block */
+ /* Coarse halation (film_halo_coarse, the G10): the core mask in 4x4 cells
+  * (grid_width = width/4) with half the box, expanded per row to one sample
+  * per pixel pair (pair_width = width/2) in expand, where the tail and the
+  * blend work as before. Otherwise pair_width == grid_width. */
+ int coarse;unsigned pair_width;unsigned char *expand;
  /* The tail (tail_on): the blurred coarse map tail_w x tail_h, its box radius
   * and reciprocal, and per row the interpolated cell row and blended mask. */
  int tail_on;
@@ -488,6 +494,8 @@ typedef struct {
  * same bytes. Taken when a pass starts. */
 static int halo_fast_requested;
 void film_halo_fast(int on){halo_fast_requested=on!=0;}
+static int halo_coarse_requested;
+void film_halo_coarse(int on){halo_coarse_requested=on!=0;}
 /* Frame scale (film_halo_scale), Q16: 65536 is L. A smaller frame stands for
  * L shrunk, so the glow's radius shrinks with it. Taken when a pass starts. */
 static unsigned halo_scale=65536u;
@@ -497,6 +505,8 @@ void film_halo_scale(unsigned scale){halo_scale=scale>=65536u||!scale?65536u:sca
  * The scaled windows of smaller frames (win 0 here: the window in c)
  * multiply by the reciprocal, which is exact: value < 256*win and win <= 25. */
 static inline __attribute__((always_inline)) unsigned halo_div(unsigned value,unsigned win,unsigned inv) {
+ if(win==7)return value/7u;
+ if(win==9)return value/9u;
  if(win==13)return value/13u;
  if(win==19)return value/19u;
  if(win==25)return value/25u;
@@ -523,6 +533,27 @@ static inline __attribute__((always_inline)) int halo_mask_row(halo_rows *c,unsi
  unsigned x,y0=row*2,y1=y0+1,gw=c->grid_width,pad=HALO_STAGES*c->box,any=0;
  const unsigned wn=win?win:c->win,inv=c->inv;
  unsigned char *m=c->row+pad;
+ if(c->coarse) {
+  /* A 4x4 cell: the highlight mean of its two middle rows' four pixels
+   * (eight samples), or of one row with fast. Rows past the frame repeat
+   * its last row; a last half cell repeats its pair. */
+  unsigned r0=row*4+1,r1=row*4+2,pairs=c->width/2;
+  if(r0>=c->height)r0=c->height-1;
+  if(r1>=c->height)r1=c->height-1;
+  const unsigned *wa=(const unsigned*)(c->image+(size_t)r0*c->stride),*wb=(const unsigned*)(c->image+(size_t)r1*c->stride);
+  const unsigned char *hl=c->highlight;
+  for(x=0;x<gw;x++) {
+   unsigned i=2*x,j=i+1<pairs?i+1:i,p=wa[i],q=wa[j],t;
+   t=hl[(p>>8)&255]+hl[p>>24]+hl[(q>>8)&255]+hl[q>>24];
+   if(fast)t=(t+2u)/4u;
+   else{unsigned u=wb[i],v=wb[j];t=(t+hl[(u>>8)&255]+hl[u>>24]+hl[(v>>8)&255]+hl[v>>24]+4u)/8u;}
+   m[x]=(unsigned char)t;any|=t;
+  }
+  if(!any)return 0;
+  memset(c->row,m[0],pad);memset(m+gw,m[gw-1],pad);
+  for(unsigned stage=HALO_STAGES;stage--;)halo_box_pass(c->row,gw+2u*c->box*stage,win,wn,inv);
+  return 1;
+ }
  if(y1>=c->height)y1=c->height-1;
  const unsigned char *a=c->image+(size_t)y0*c->stride,*b=c->image+(size_t)y1*c->stride,*hl=c->highlight;
  /* One aligned 32-bit read per UYVY pair (U,Y0,V,Y1 little-endian) instead of
@@ -617,12 +648,16 @@ static inline __attribute__((always_inline)) int halo_push_win(halo_rows *c,unsi
 }
 static int halo_push(halo_rows *c,unsigned row,unsigned depth,unsigned char *out,int out_zero) {
  if(c->fast)switch(c->win){
+  case 7:return halo_push_win(c,row,depth,out,out_zero,7,1);
+  case 9:return halo_push_win(c,row,depth,out,out_zero,9,1);
   case 13:return halo_push_win(c,row,depth,out,out_zero,13,1);
   case 19:return halo_push_win(c,row,depth,out,out_zero,19,1);
   case 25:return halo_push_win(c,row,depth,out,out_zero,25,1);
   default:return halo_push_win(c,row,depth,out,out_zero,0,1);
  }
  switch(c->win){
+  case 7:return halo_push_win(c,row,depth,out,out_zero,7,0);
+  case 9:return halo_push_win(c,row,depth,out,out_zero,9,0);
   case 13:return halo_push_win(c,row,depth,out,out_zero,13,0);
   case 19:return halo_push_win(c,row,depth,out,out_zero,19,0);
   case 25:return halo_push_win(c,row,depth,out,out_zero,25,0);
@@ -644,6 +679,22 @@ static void halo_average(unsigned char *restrict out,const unsigned char *restri
   for(;i+4<=n;i+=4,o++,x++,y++){unsigned p=*x,q=*y;*o=(p|q)-(((p^q)>>1)&0x7f7f7f7fu);}
  }
  for(;i<n;i++)out[i]=(unsigned char)((a[i]+b[i]+1)/2);
+}
+/* Coarse halation: out = a + (b - a) * phase / 4, rounded, phase 1..3. */
+static void halo_lerp4(unsigned char *out,const unsigned char *a,const unsigned char *b,unsigned n,unsigned phase) {
+ unsigned i,wa=4u-phase;
+ for(i=0;i<n;i++)out[i]=(unsigned char)((a[i]*wa+b[i]*phase+2u)>>2);
+}
+/* Coarse halation: one sample per pixel pair from a row of 4x4 cells. Pair
+ * 2k lies a quarter cell left of cell k's centre, pair 2k+1 a quarter right:
+ * 3/4 of the cell and 1/4 of its neighbour (edge cells repeated). */
+static void halo_expand(unsigned char *out,const unsigned char *m,unsigned cells,unsigned pairs) {
+ unsigned k;
+ for(k=0;k<cells;k++) {
+  unsigned v=3u*m[k],prev=k?m[k-1]:m[k],next=k+1<cells?m[k+1]:m[k];
+  if(2*k<pairs)out[2*k]=(unsigned char)((v+prev+2u)>>2);
+  if(2*k+1<pairs)out[2*k+1]=(unsigned char)((v+next+2u)>>2);
+ }
 }
 /* The tail's coarse map: each cell the rounded mean highlight weight of 16
  * of its pixels, rows 0, 4, 8, 12 by columns 0, 4, 8, 12 (a sample past the
@@ -693,7 +744,7 @@ static inline __attribute__((always_inline)) unsigned halo_tail_at(int p,unsigne
  * cell 0's centre) by stepping the weighted sum. Returns 0 when the blend
  * is all zero. */
 static int halo_tail_combine(halo_rows *c,unsigned y,const unsigned char *core) {
- unsigned gw=c->grid_width,x,any=0;
+ unsigned gw=c->pair_width,x,any=0;
  unsigned char *t=c->tail_grid,*o=c->comb;const unsigned char *ts=c->tail_scale;
  if(!(y&1u)) {
   unsigned tw=c->tail_w,i,g,rany=0,j=halo_tail_at((int)y-7,c->tail_h,&g);
@@ -1041,11 +1092,15 @@ static int map_halo_cached(unsigned char *image,size_t size,unsigned width,unsig
  memset(work,0,needed);memset(&c,0,sizeof(c));c.width=width;c.height=height;c.stride=stride;c.image=image;
  c.box=halo_box(level);
  if(halo_scale!=65536u){c.box=(c.box*halo_scale+32768u)>>16;if(!c.box)c.box=1;}
+ c.coarse=halo_coarse_requested;
+ if(c.coarse){c.box/=2;if(!c.box)c.box=1;}         /* 4x4 cells: half the box, the same glow size */
  c.radius=HALO_STAGES*c.box;c.win=2*c.box+1;c.inv=(unsigned)((0x100000000ull+c.win-1u)/c.win);c.strength=film_halo_strength(level);
  c.tint_red=tint?tint->red:256;c.tint_green=tint?tint->green:0;c.tint_blue=tint?tint->blue:0;
  c.tint_luma=(19595u*c.tint_red+38470u*c.tint_green+7471u*c.tint_blue+32768u)>>16;
  c.highlight=tint&&tint->highlight?tint->highlight:halo_highlight;c.fast=halo_fast_requested;
- c.grid_width=width/2;c.grid_height=(height+1)/2;
+ c.pair_width=width/2;
+ if(c.coarse){c.grid_width=(width+3)/4;c.grid_height=(height+3)/4;}
+ else{c.grid_width=width/2;c.grid_height=(height+1)/2;}
  c.ring=work;c.sum=(unsigned short*)(c.ring+(((size_t)c.grid_width*c.win*HALO_STAGES+1u)&~(size_t)1u));
  c.tmp=(unsigned char*)(c.sum+HALO_STAGES*c.grid_width);c.current=c.tmp+c.grid_width;c.next=c.current+c.grid_width;c.row=c.next+c.grid_width;
  /* The tail, after the core's workspace (as film_halo_level_work_size lays
@@ -1055,7 +1110,8 @@ static int map_halo_cached(unsigned char *image,size_t size,unsigned width,unsig
    if(halo_scale!=65536u){tb=(tb*halo_scale+32768u)>>16;if(!tb)tb=1;}
    c.tail_on=th<=tw;
    c.tail_sum=(unsigned short*)t;c.tail_map=t+2u*tw;c.tail_line=c.tail_map+(size_t)tw*tw;
-   c.tail_row=c.tail_line+tw+2u*HALO_STAGES*halo_tail_box(level);c.tail_grid=c.tail_row+tw;c.comb=c.tail_grid+c.grid_width;c.comb_zero=1;
+   c.tail_row=c.tail_line+tw+2u*HALO_STAGES*halo_tail_box(level);c.tail_grid=c.tail_row+tw;c.comb=c.tail_grid+c.pair_width;c.comb_zero=1;
+   c.expand=c.comb+c.pair_width;     /* coarse only: the core grid uses far less than the workspace's 2x2 size */
    for(i=0;i<256;i++){c.tail_scale[i]=(unsigned char)((154u*i+64u)>>8);c.core_scale[i]=(unsigned char)((102u*i+64u)>>8);}
    c.tail_w=tw;c.tail_h=th;c.tail_box=tb;c.tail_win=2u*tb+1u;c.tail_inv=(unsigned)((0x100000000ull+c.tail_win-1u)/c.tail_win);
    if(c.tail_on)halo_tail_build(&c); }
@@ -1070,8 +1126,18 @@ static int map_halo_cached(unsigned char *image,size_t size,unsigned width,unsig
  int copy=scratch&&!rows_in_place;
  for(row=0;row<height;row++) {
   const unsigned char *mask=c.current;int mask_zero=c.current_zero;
-  c.blend=row&1;
-  if(c.blend) {
+  if(c.coarse) {
+   /* Four image rows per mask row: a quarter step from current to next
+    * per row, then two samples per cell along the row. */
+   unsigned phase=row&3u;
+   c.blend=phase!=0;
+   if(phase==1)halo_prepare_odd(&c);
+   if(phase) {
+    mask_zero=c.current_zero&&c.next_zero;
+    if(!mask_zero){halo_lerp4(c.tmp,c.current,c.next,c.grid_width,phase);mask=c.tmp;}
+   }
+   if(!mask_zero){halo_expand(c.expand,mask,c.grid_width,c.pair_width);mask=c.expand;}
+  } else if((c.blend=row&1)) {
    /* Odd rows sample halfway between two mask rows. tmp is free until the
     * next halo_fill, so it holds this row's samples. */
    halo_prepare_odd(&c);
@@ -1095,7 +1161,7 @@ static int map_halo_cached(unsigned char *image,size_t size,unsigned width,unsig
    if(printing)film_print_row(&prt,row,pixels,col,span);
    if(copy)memcpy(source,scratch,span*2);
   }
-  if(c.blend){unsigned char *swap=c.current;int z=c.current_zero;c.current=c.next;c.next=swap;c.current_zero=c.next_zero;c.next_zero=z;}
+  if(c.coarse?(row&3u)==3u:c.blend){unsigned char *swap=c.current;int z=c.current_zero;c.current=c.next;c.next=swap;c.current_zero=c.next_zero;c.next_zero=z;}
   if(progress&&(row%32==31||row+1==height))progress(row+1,height);
  }
  return 0;

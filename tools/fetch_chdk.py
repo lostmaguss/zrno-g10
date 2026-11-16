@@ -14,12 +14,16 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from pathlib import Path
 from urllib.parse import unquote
 from urllib.request import Request, urlopen
-import base64, hashlib, re, sys, time
+import base64, hashlib, os, re, sys, time
 
 BASE = 'https://subversion.assembla.com/svn/chdk/!svn/bc/6355/branches/release-1_6/'
 AUTH = 'Basic ' + base64.b64encode(b'guest:guest').decode()
 LAB = Path(__file__).resolve().parents[1]
-KEEP = {'platform/': ('platform/g12/', 'platform/generic/'), 'loader/': ('loader/g12/', 'loader/generic/')}
+# ZRNO_EXTRA_PORTS=g10 also fetches those cameras' ports (not covered by the
+# checksum list, which only pins the G12 tree).
+_EXTRA = tuple(c for c in os.environ.get('ZRNO_EXTRA_PORTS', '').split(',') if c)
+KEEP = {'platform/': ('platform/g12/', 'platform/generic/') + tuple(f'platform/{c}/' for c in _EXTRA),
+        'loader/': ('loader/g12/', 'loader/generic/') + tuple(f'loader/{c}/' for c in _EXTRA)}
 
 
 def wanted(path):

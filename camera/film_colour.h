@@ -16,6 +16,10 @@ void film_colour_rows_in_place(int on);
 /* Fast halation (FASTHALO.TXT): the mask from the top row of each 2x2 block.
  * Approximate; taken when each pass starts. */
 void film_halo_fast(int on);
+/* Coarse halation (the G10, docs/PORT-G10.md): the glow mask in 4x4-pixel cells
+ * with half the box, interpolated back per pixel pair. About the same glow,
+ * a quarter of the mask work. Taken when each pass starts. */
+void film_halo_coarse(int on);
 /* Frame size relative to L (Q16, 65536 = L; set by the stage for M1, M2 and
  * S): the glow's radius shrinks with it. Taken when each pass starts. */
 void film_halo_scale(unsigned scale);

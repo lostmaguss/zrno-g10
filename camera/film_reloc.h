@@ -27,8 +27,12 @@ int film_reloc_build(film_rom_word rom, unsigned *out, unsigned out_addr,
                      unsigned trace_fn, unsigned observe_fn,
                      unsigned *hash, unsigned short *map);
 
-/* Hash of a G12 1.00G ROM's develop task, as film_reloc_build reports it. */
-#define FILM_RELOC_HASH 0xd12f82deu
+/* Hash of the ROM's develop task, as film_reloc_build reports it. */
+#ifdef MAGUS_G10
+#define FILM_RELOC_HASH 0x1df5e28du   /* G10 1.03B (tests/g10_reloc_host.c) */
+#else
+#define FILM_RELOC_HASH 0xd12f82deu   /* G12 1.00G */
+#endif
 
 #ifndef FILM_RELOC_HOST
 /* Camera: the copy's entry point, built on the first call; 0 if the ROM
