@@ -6,7 +6,7 @@ camera's DIGIC image processor, with a live preview. Many effects are heavily
 optimized for maximum performance, using the DSP instructions of the ARMv5TE
 instruction set. Built on [CHDK](https://chdk.fandom.com/).
 
-**[Open the web editor](https://suzvuk.github.io/zrno/)** to edit your shots in the browser.
+**[Open the web editor](https://suzvuk.github.io/zrno/)** to edit your shots in the browser, straight from the camera over USB.
 
 <table>
   <tr>
