@@ -61,10 +61,11 @@ sizes.
 
 ## Getting it onto a camera
 
-There is no ready-made release yet: build it from source (below), then set
-up the SD card. The G10 starts CHDK from a card only from a small **FAT16**
-partition marked bootable, so the card needs two partitions. This erases
-the card: back it up first.
+Download `magus-VERSION-g10-103b.zip` from
+[Releases](https://github.com/lostmaguss/zrno-g10/releases) and follow its
+`INSTALL.TXT`, or build it from source (below). The G10 starts CHDK from a
+card only from a small **FAT16** partition marked bootable, so the card
+needs two partitions. This erases the card: back it up first.
 
 1. Check the firmware: put an empty file `ver.req` on a card, switch the
    camera on in playback and press **FUNC/SET** + **DISP**. It must say
@@ -74,13 +75,16 @@ the card: back it up first.
    1. `ZRNO_BOOT`: 32 MB, FAT16, first partition;
    2. `ZRNO`: the rest, FAT32.
 3. Write `BOOTDISK` at byte 0x40 of the FAT16 partition's boot sector
-   (what CHDK's tools call "make card bootable").
+   (what CHDK's tools call "make card bootable"). On Windows,
+   `tools/mark_boot_g10.py` (also in the release zip) does it, as
+   administrator.
 4. Copy the built `DISKBOOT.BIN` to **both** partitions, and to the FAT32
    one CHDK's files plus `card-g10/CHDK/MAGUS/` as `CHDK/MAGUS/`.
 5. **Lock** the card, put it in the camera and switch it on. CHDK starts
    (the blue Print light flashes). Unlocked, the camera starts as a normal
    Canon.
 
+The release's `INSTALL.TXT` gives the exact Windows commands for steps 2–4.
 Nothing is installed in the camera itself. Firmware Update (`PS.FI2`)
 cannot start Magus: it only starts the official CHDK.
 
@@ -95,6 +99,8 @@ make PLATFORM=g10 PLATFORMSUB=103b CROSS_COMPILE=arm-none-eabi- DEF_SVN_REF=6355
 ```
 
 The firmware is `bin/DISKBOOT.BIN`, the matching modules `CHDK/MODULES/`.
+`python3 tools/package_g10.py VERSION` builds a release (card zip, GPL
+source zip, checksums) from a committed tree.
 Tested with xPack GNU Arm Embedded GCC 10.3.1-2.3, on Windows with MSYS2's
 `make` (see [docs/BUILDING.md](docs/BUILDING.md) for the toolchain).
 `python3 tools/g10_table.py` rebuilds the G10 looks.
